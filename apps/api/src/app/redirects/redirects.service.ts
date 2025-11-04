@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ArrayContains, Repository } from 'typeorm';
 import { Datasources } from '../../common/datasources.enum';
@@ -8,9 +8,12 @@ import { ChatTagEntity } from '../../database/db-appchat/entities/chat-tag.entit
 import { RedirectChatsDto } from '@backoffice-monorepo/shared-types';
 import { VdiService } from '../vdi/vdi.service';
 import { InstantMessengerService } from '../instant-messenger/instant-messenger.service';
+import { VdiUserResponseDto } from '../vdi/dto/vdi-user-response.dto';
 
 @Injectable()
 export class RedirectsService {
+  private readonly logger = new Logger(RedirectsService.name);
+
   constructor(
     @InjectRepository(AccountEntity, Datasources.DB_APPCHAT)
     private readonly accountEntityRepository: Repository<AccountEntity>,
@@ -28,33 +31,42 @@ export class RedirectsService {
   async redirectUserChats(redirectChatsDto: RedirectChatsDto): Promise<{
     message: string;
   }> {
-    const { userIdSaida, userIdDestino } = redirectChatsDto;
+    const { sourceUserId, destinationUserId } = redirectChatsDto;
 
-    const userSaidaExists = await this.chatEntityRepository.findOne({
-      where: { userId: userIdSaida },
-    });
+    const sourceUser = await this.vdiService.getUserById(sourceUserId);
 
-    if (!userSaidaExists) {
+    if (!sourceUser?.structs?.sectors?.length || !sourceUser?.groups?.length) {
       throw new NotFoundException(
-        `Usuário de saída ${userIdSaida} não encontrado.`
+        `Usuário ${sourceUserId} não possui setores ou grupos válidos.`
       );
     }
 
-    const userDestinoExists = await this.chatEntityRepository.findOne({
-      where: { userId: userIdDestino },
-    });
+    const destinationUser = await this.vdiService.getUserById(
+      destinationUserId
+    );
 
-    if (!userDestinoExists) {
+    if (!destinationUser) {
       throw new NotFoundException(
-        `Usuário de destino ${userIdDestino} não encontrado.`
+        `Usuário de destino ${destinationUserId} não encontrado no VDI.`
       );
     }
 
-    // await this.redirectOldChats(userIdSaida, userIdDestino);
-    await this.redirectFutureChats(userIdSaida, userIdDestino);
+    const sourceChatsExists = await this.chatEntityRepository.findOne({
+      where: { userId: sourceUserId },
+    });
+
+    if (sourceChatsExists) {
+      await this.redirectOldChats(sourceUser, destinationUser);
+    } else {
+      this.logger.warn(
+        `Usuário de origem ${sourceUserId} não possui chats para redirecionar.`
+      );
+    }
+
+    await this.redirectFutureChats(sourceUser, destinationUser);
 
     return {
-      message: `Redirecionamento de chats de ${userIdSaida} para ${userIdDestino} concluído.`,
+      message: `Redirecionamento de chats de ${sourceUser.id} para ${destinationUser.id} concluído.`,
     };
   }
 
@@ -74,16 +86,16 @@ export class RedirectsService {
    * Redireciona chats existentes.
    */
   private async redirectOldChats(
-    userIdSaida: string,
-    userIdDestino: string
+    sourceUser: VdiUserResponseDto,
+    destinationUser: VdiUserResponseDto
   ): Promise<{ message: string }> {
     await this.chatTagEntityRepository.delete({
-      chat: { userId: userIdSaida },
+      chat: { userId: sourceUser.id },
     });
 
     const result = await this.chatEntityRepository.update(
-      { userId: userIdSaida },
-      { userId: userIdDestino }
+      { userId: sourceUser.id },
+      { userId: destinationUser.id }
     );
 
     return {
@@ -95,12 +107,11 @@ export class RedirectsService {
    *  Redireciona chats futuros.
    */
   private async redirectFutureChats(
-    userIdSaida: string,
-    userIdDestino: string
+    sourceUser: VdiUserResponseDto,
+    destinationUser: VdiUserResponseDto
   ): Promise<{ message: string }> {
-    const user = await this.vdiService.getUserById(userIdSaida);
-
-    const groupId = user.groups[0].id;
+    const groupId = sourceUser.groups[0].id;
+    const sectorCode = sourceUser.structs.sectors[0].code;
 
     const account = await this.accountEntityRepository.findOne({
       where: {
@@ -108,28 +119,24 @@ export class RedirectsService {
       },
     });
 
-    if (!account || !account.pool || !account.pool.config) {
+    if (!account?.pool?.config) {
       throw new NotFoundException(
         `Conta não encontrada com o grupo ${groupId}.`
       );
     }
 
     const userApplications =
-      await this.instantMessengerService.getUserApplications(user.email);
+      await this.instantMessengerService.getUserApplications(sourceUser.email);
 
     if (userApplications[0].id !== account.appId) {
       throw new NotFoundException(
-        `Aplicação do usuário ${userIdSaida}, com conta com appId ${account.appId} não compatível com a aplicação ${userApplications[0].id} do Instant Messenger.`
+        `Aplicação do usuário ${sourceUser.id}, com conta com appId ${account.appId} não compatível com a aplicação ${userApplications[0].id} do Instant Messenger.`
       );
     }
 
-    const sectorCode = user.structs.sectors[0].code;
+    account.pool.config.overrides[sectorCode] = destinationUser.id;
 
-    account.pool.config.overrides[sectorCode] = userIdDestino;
-
-    console.log(account.pool);
-
-    // await this.accountEntityRepository.save(account);
+    await this.accountEntityRepository.save(account);
 
     return {
       message: 'Redirecionamento dos chats futuros configurado.',

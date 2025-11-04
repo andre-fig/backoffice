@@ -122,6 +122,7 @@ export class MetaService {
   }
 
   async listWabas(): Promise<Waba[]> {
+    // TODO: FILTRAR PELOS NOSSOS WABAS
     return this.requestAllPages<Waba>(
       `/${this.businessId}/owned_whatsapp_business_accounts`,
       {

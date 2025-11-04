@@ -12,8 +12,8 @@ const ChatRedirectForm = () => {
   const [usersSaida, setUsersSaida] = useState<User[]>([]);
   const [usersDestino, setUsersDestino] = useState<User[]>([]);
   const [formData, setFormData] = useState<RedirectChatsDto>({
-    userIdSaida: '',
-    userIdDestino: '',
+    sourceUserId: '',
+    destinationUserId: '',
   });
 
   const [searchSaida, setSearchSaida] = useState<string>('');
@@ -102,11 +102,11 @@ const ChatRedirectForm = () => {
   }, [searchDestino]);
 
   const handleSelectSaida = (_: unknown, user: User | null) => {
-    setFormData((prev) => ({ ...prev, userIdSaida: user?.id ?? '' }));
+    setFormData((prev) => ({ ...prev, sourceUserId: user?.id ?? '' }));
   };
 
   const handleSelectDestino = (_: unknown, user: User | null) => {
-    setFormData((prev) => ({ ...prev, userIdDestino: user?.id ?? '' }));
+    setFormData((prev) => ({ ...prev, destinationUserId: user?.id ?? '' }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,7 +133,7 @@ const ChatRedirectForm = () => {
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-      <Typography variant="h6">Redirecionamento de Férias</Typography>
+      <Typography variant="h6">Redirecionar Conversas</Typography>
       <FormControl fullWidth margin="normal">
         <Autocomplete
           options={usersSaida}
@@ -143,7 +143,7 @@ const ChatRedirectForm = () => {
           loading={loadingSaida}
           onChange={handleSelectSaida}
           onInputChange={(e, value) => setSearchSaida(value)}
-          value={usersSaida.find((u) => u.id === formData.userIdSaida) || null}
+          value={usersSaida.find((u) => u.id === formData.sourceUserId) || null}
           renderInput={(params) => (
             <TextField
               {...params}
@@ -164,7 +164,8 @@ const ChatRedirectForm = () => {
           onChange={handleSelectDestino}
           onInputChange={(e, value) => setSearchDestino(value)}
           value={
-            usersDestino.find((u) => u.id === formData.userIdDestino) || null
+            usersDestino.find((u) => u.id === formData.destinationUserId) ||
+            null
           }
           renderInput={(params) => (
             <TextField

@@ -61,7 +61,7 @@ import { MetaModule } from './meta/meta.module';
     // }),
 
     // RedirectsModule,
-    // VdiModule,
+    VdiModule,
     // InstantMessengerModule,
     AuthModule,
     MetaModule,

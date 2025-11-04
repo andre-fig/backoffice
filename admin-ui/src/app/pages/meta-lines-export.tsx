@@ -27,10 +27,10 @@ export default function MetaLinesExportPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h5">Exportar Linhas (Meta / WhatsApp)</Typography>
+      <Typography variant="h5">Exportar Linhas da Meta</Typography>
       {error && <Alert severity="error">{error}</Alert>}
       <Button variant="contained" onClick={handleExport} disabled={loading}>
-        {loading ? 'Gerando…' : 'Exportar PDF'}
+        {loading ? 'Gerando…' : 'Exportar CSV'}
       </Button>
     </Stack>
   );

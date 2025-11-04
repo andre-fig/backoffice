@@ -1,4 +1,4 @@
 export interface RedirectChatsDto {
-  userIdSaida: string;
-  userIdDestino: string;
+  sourceUserId: string;
+  destinationUserId: string;
 }

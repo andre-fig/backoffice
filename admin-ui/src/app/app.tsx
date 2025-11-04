@@ -2,6 +2,7 @@ import { Box, CssBaseline, Toolbar } from '@mui/material';
 import { Route, Routes } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import ChatRedirectForm from './pages/chat-redirect';
+import MetaLinesExportPage from './pages/meta-lines-export';
 import NxWelcome from './nx-welcome';
 
 export function App() {
@@ -17,6 +18,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<NxWelcome title="admin-ui" />} />
           <Route path="/redirects/chats" element={<ChatRedirectForm />} />
+          <Route path="/meta/lines/export" element={<MetaLinesExportPage />} />
         </Routes>
       </Box>
     </Box>

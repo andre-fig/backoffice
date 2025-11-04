@@ -26,8 +26,13 @@ const Sidebar = () => {
       <Box sx={{ overflow: 'auto' }}>
         <List>
           <ListItem key="chat-redirect" disablePadding>
-            <ListItemButton component={Link} to="/redirects/chat">
+            <ListItemButton component={Link} to="/redirects/chats">
               <ListItemText primary="Redirecionamento de Conversas" />
+            </ListItemButton>
+          </ListItem>
+          <ListItem key="meta-lines-export" disablePadding>
+            <ListItemButton component={Link} to="/meta/lines/export">
+              <ListItemText primary="Exportar Linhas (Meta)" />
             </ListItemButton>
           </ListItem>
         </List>

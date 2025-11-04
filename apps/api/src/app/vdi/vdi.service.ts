@@ -6,54 +6,22 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { AxiosRequestConfig, AxiosResponse, isAxiosError } from 'axios';
 import { lastValueFrom } from 'rxjs';
-import { chromium, Browser } from 'playwright';
 import { VdiUserResponseDto } from './dto/vdi-user-response.dto';
-import { MethodsEnum } from '@backoffice-monorepo/shared-types';
+import { MethodsEnum, VdiUsersDto } from '@backoffice-monorepo/shared-types';
+import { AuthService } from '../auth/auth.service';
 
 @Injectable()
 export class VdiService {
   private readonly logger = new Logger(VdiService.name);
-  private readonly LOCAL_STORAGE_KEY = 'INSERT_LOCALSTORAGE_KEY';
-  private readonly VDI_API_URL =
-    'https://vdi.venda-direta.grupoboticario.digital';
   private readonly VDI_CORE_USERS_URL =
-    'https://vdi-core-users.venda-direta.grupoboticario.digital';
+    'https://hvdi-core-users.venda-direta.grupoboticario.digital';
 
   private token: string | null = null;
 
-  constructor(private readonly httpService: HttpService) {}
-
-  private async login(): Promise<void> {
-    let browser: Browser | null = null;
-    try {
-      browser = await chromium.launch({ headless: true });
-      const page = await browser.newPage();
-
-      await page.goto(this.VDI_API_URL, { waitUntil: 'domcontentloaded' });
-
-      const token = await page.evaluate(
-        (key: string) => window.localStorage.getItem(key),
-        this.LOCAL_STORAGE_KEY
-      );
-
-      if (!token) {
-        throw new InternalServerErrorException(
-          `Token não encontrado no localStorage na chave: ${this.LOCAL_STORAGE_KEY}.`
-        );
-      }
-
-      this.token = token;
-      this.logger.debug('Token VDI obtido com sucesso.');
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Falha ao obter token VDI via Playwright: ${(error as Error).message}`
-      );
-    } finally {
-      if (browser) {
-        await browser.close();
-      }
-    }
-  }
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly authService: AuthService
+  ) {}
 
   private async request<R, D = unknown>(
     method: MethodsEnum,
@@ -85,7 +53,9 @@ export class VdiService {
       if (isAxiosError(error) && error.response?.status === 401 && !_retried) {
         this.logger.warn('Token expirado. Realizando novo login...');
 
-        await this.login();
+        const token = await this.authService.login();
+        this.token = token.token;
+
         return this.request<R, D>(method, url, { data, params }, true);
       }
 
@@ -100,5 +70,15 @@ export class VdiService {
       MethodsEnum.GET,
       `/admin/users/${encodeURIComponent(userId)}`
     );
+  }
+
+  async getUsers(options: {
+    filter?: string;
+    perPage?: number;
+    direction?: string;
+  }): Promise<VdiUsersDto> {
+    return this.request<VdiUsersDto>(MethodsEnum.GET, `/admin/users`, {
+      params: options,
+    });
   }
 }

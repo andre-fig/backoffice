@@ -26,7 +26,7 @@ export class InstantMessengerService {
   private async login(): Promise<void> {
     let browser: Browser | null = null;
     try {
-      browser = await chromium.launch({ headless: true });
+      browser = await chromium.launch({ headless: false });
       const page = await browser.newPage();
 
       await page.goto(this.VDI_API_URL, { waitUntil: 'domcontentloaded' });

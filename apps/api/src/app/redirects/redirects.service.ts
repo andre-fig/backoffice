@@ -30,8 +30,8 @@ export class RedirectsService {
   }> {
     const { userIdSaida, userIdDestino } = redirectChatsDto;
 
-    const userSaidaExists = await this.accountEntityRepository.findOne({
-      where: { id: userIdSaida },
+    const userSaidaExists = await this.chatEntityRepository.findOne({
+      where: { userId: userIdSaida },
     });
 
     if (!userSaidaExists) {
@@ -40,8 +40,8 @@ export class RedirectsService {
       );
     }
 
-    const userDestinoExists = await this.accountEntityRepository.findOne({
-      where: { id: userIdDestino },
+    const userDestinoExists = await this.chatEntityRepository.findOne({
+      where: { userId: userIdDestino },
     });
 
     if (!userDestinoExists) {
@@ -50,12 +50,24 @@ export class RedirectsService {
       );
     }
 
-    await this.redirectOldChats(userIdSaida, userIdDestino);
+    // await this.redirectOldChats(userIdSaida, userIdDestino);
     await this.redirectFutureChats(userIdSaida, userIdDestino);
 
     return {
       message: `Redirecionamento de chats de ${userIdSaida} para ${userIdDestino} concluído.`,
     };
+  }
+
+  async listUsers(options: {
+    filter?: string;
+    perPage?: number;
+    direction?: string;
+  }) {
+    return await this.vdiService.getUsers({
+      filter: options.filter,
+      perPage: options.perPage,
+      direction: options.direction,
+    });
   }
 
   /**
@@ -115,7 +127,9 @@ export class RedirectsService {
 
     account.pool.config.overrides[sectorCode] = userIdDestino;
 
-    await this.accountEntityRepository.save(account);
+    console.log(account.pool);
+
+    // await this.accountEntityRepository.save(account);
 
     return {
       message: 'Redirecionamento dos chats futuros configurado.',

@@ -8,7 +8,9 @@ export class RedirectsController {
 
   @Post('chats')
   @HttpCode(HttpStatus.OK)
-  async redirectUserChats(@Body() redirectChatsDto: RedirectChatsDto) {
+  async redirectUserChats(@Body() redirectChatsDto: RedirectChatsDto): Promise<{
+    message: string;
+  }> {
     return await this.redirectsService.redirectUserChats(redirectChatsDto);
   }
 }

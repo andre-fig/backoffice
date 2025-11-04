@@ -13,6 +13,7 @@ import { ChatTagEntity } from '../database/db-appchat/entities/chat-tag.entity';
 import { Datasources } from '../common/datasources.enum';
 import { VdiModule } from './vdi/vdi.module';
 import { InstantMessengerModule } from './instant-messenger/instant-messenger.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { InstantMessengerModule } from './instant-messenger/instant-messenger.mo
     RedirectsModule,
     VdiModule,
     InstantMessengerModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

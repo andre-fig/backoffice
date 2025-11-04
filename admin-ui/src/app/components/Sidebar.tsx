@@ -25,9 +25,9 @@ const Sidebar = () => {
       <Toolbar />
       <Box sx={{ overflow: 'auto' }}>
         <List>
-          <ListItem key="vacation-redirect" disablePadding>
-            <ListItemButton component={Link} to="/redirects/vacation">
-              <ListItemText primary="Redirecionamento de Férias" />
+          <ListItem key="chat-redirect" disablePadding>
+            <ListItemButton component={Link} to="/redirects/chat">
+              <ListItemText primary="Redirecionamento de Conversas" />
             </ListItemButton>
           </ListItem>
         </List>

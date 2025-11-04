@@ -1,7 +1,7 @@
 import { Box, CssBaseline, Toolbar } from '@mui/material';
 import { Route, Routes } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
-import VacationRedirectForm from './pages/vacation-redirect';
+import ChatRedirectForm from './pages/chat-redirect';
 import NxWelcome from './nx-welcome';
 
 export function App() {
@@ -16,10 +16,7 @@ export function App() {
         <Toolbar />
         <Routes>
           <Route path="/" element={<NxWelcome title="admin-ui" />} />
-          <Route
-            path="/redirects/vacation"
-            element={<VacationRedirectForm />}
-          />
+          <Route path="/redirects/chats" element={<ChatRedirectForm />} />
         </Routes>
       </Box>
     </Box>

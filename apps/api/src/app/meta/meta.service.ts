@@ -5,8 +5,19 @@ import {
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { AxiosRequestConfig, AxiosResponse } from 'axios';
+import { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { lastValueFrom } from 'rxjs';
+
+interface GraphApiResponse<T> {
+  data: T[];
+  paging?: {
+    cursors: {
+      before: string;
+      after: string;
+    };
+    next?: string;
+  };
+}
 
 interface Waba {
   id: string;
@@ -50,62 +61,79 @@ export class MetaService {
 
   private async request<R>(
     url: string,
-    params: Record<string, string> = {}
+    params: Record<string, string | number | undefined> = {}
   ): Promise<R> {
     if (!this.accessToken) {
+      this.logger.error('META_ACCESS_TOKEN não configurado');
       throw new InternalServerErrorException(
         'META_ACCESS_TOKEN não configurado'
       );
     }
+
     const config: AxiosRequestConfig = {
       baseURL: this.baseURL,
       method: 'get',
       url,
       params: { access_token: this.accessToken, ...params },
     };
+
     try {
       const res = await lastValueFrom<AxiosResponse<R>>(
         this.http.request<R>(config)
       );
       return res.data;
     } catch (err) {
-      this.logger.error(
-        `Erro ao chamar Meta API ${url}: ${(err as Error).message}`
-      );
       throw new InternalServerErrorException(
-        'Falha ao comunicar com a API da Meta'
+        `Falha ao comunicar com a API da Meta: ${(err as AxiosError).message}`
       );
     }
   }
 
-  async listWabas(): Promise<Waba[]> {
-    if (!this.businessId) {
-      // Tentativa alternativa: /me/owned_whatsapp_business_accounts
-      const data = await this.request<{ data: Waba[] }>(
-        `/me/owned_whatsapp_business_accounts`,
-        {
-          fields: 'id,name',
-        }
+  private async requestAllPages<T>(
+    path: string,
+    params: Record<string, string | number | undefined> = {}
+  ): Promise<T[]> {
+    const allItems: T[] = [];
+    let afterCursor: string | undefined = undefined;
+
+    do {
+      const queryParams: Record<string, string | number | undefined> = {
+        ...params,
+        limit: params.limit || 100,
+      };
+
+      if (afterCursor) {
+        queryParams.after = afterCursor;
+      }
+
+      const response = await this.request<GraphApiResponse<T>>(
+        path,
+        queryParams
       );
-      return data?.data ?? [];
-    }
-    const data = await this.request<{ data: Waba[] }>(
+
+      if (response?.data) {
+        allItems.push(...response.data);
+      }
+
+      afterCursor = response?.paging?.cursors?.after;
+    } while (afterCursor);
+
+    return allItems;
+  }
+
+  async listWabas(): Promise<Waba[]> {
+    return this.requestAllPages<Waba>(
       `/${this.businessId}/owned_whatsapp_business_accounts`,
       {
         fields: 'id,name',
       }
     );
-    return data?.data ?? [];
   }
 
   async listLines(wabaId: string): Promise<PhoneNumber[]> {
-    const data = await this.request<{ data: PhoneNumber[] }>(
-      `/${wabaId}/phone_numbers`,
-      {
-        fields: 'id,display_phone_number,verified_name,status,quality_rating',
-      }
-    );
-    return data?.data ?? [];
+    return this.requestAllPages<PhoneNumber>(`/${wabaId}/phone_numbers`, {
+      fields: 'id,display_phone_number,verified_name,status,quality_rating',
+    });
   }
 
   async getPhoneNumberDetails(

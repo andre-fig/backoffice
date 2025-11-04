@@ -34,7 +34,6 @@ export class MetaController {
       const lines = await this.meta.listLines(waba.id);
       for (const line of lines) {
         const ativa = (line.status ?? '').toUpperCase();
-        // Busca informações detalhadas para selo azul
         const details = await this.meta.getPhoneNumberDetails(line.id);
         const verificada = details.is_official_business_account ? 'Sim' : 'Não';
         rows.push({
@@ -50,7 +49,6 @@ export class MetaController {
       }
     }
 
-    // Gera CSV
     const headers = [
       'ID',
       'Linha',
@@ -98,7 +96,7 @@ export class MetaController {
       );
     }
 
-    const csvContent = '\uFEFF' + csvLines.join('\n'); // BOM para melhor compatibilidade com Excel
+    const csvContent = '\uFEFF' + csvLines.join('\n');
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader(
       'Content-Disposition',

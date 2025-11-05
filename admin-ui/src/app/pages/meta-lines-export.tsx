@@ -25,13 +25,15 @@ import {
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useToast } from '../hooks/useToast';
 import { useSortable } from '../hooks/useSortable';
-import {
-  MetaLineRowDto,
-  MetaLinesStreamEvent,
-  ImWabaDto,
-  Waba,
-  WabaAnalyticsResponseDto,
-} from '@backoffice-monorepo/shared-types';
+import { MetaLineRowDto, MetaLinesStreamEvent, WabaAnalyticsResponseDto } from '@backoffice-monorepo/shared-types';
+
+// Backoffice WABA as returned by /api/meta/wabas
+type BackofficeWaba = {
+  id: string; // UUID (internal)
+  externalId: string; // Meta WABA ID
+  wabaName: string;
+  isVisible: boolean;
+};
 
 type SortableColumn =
   | 'id'
@@ -49,8 +51,7 @@ export default function MetaLinesExportPage() {
   const [progress, setProgress] = useState({ processed: 0, total: 0 });
   const [cacheKey, setCacheKey] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [imWabas, setImWabas] = useState<ImWabaDto[]>([]);
-  const [availableWabas, setAvailableWabas] = useState<Waba[]>([]);
+  const [availableWabas, setAvailableWabas] = useState<BackofficeWaba[]>([]);
   const [isLoadingWabas, setIsLoadingWabas] = useState(true);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [wabaSearchTerm, setWabaSearchTerm] = useState('');
@@ -121,12 +122,12 @@ export default function MetaLinesExportPage() {
   });
 
   useEffect(() => {
-    loadImWabas();
     loadAvailableWabas();
   }, []);
 
   useEffect(() => {
-    if (!isLoadingWabas && imWabas.length > 0) {
+    // Inicia o streaming quando houver pelo menos um WABA visível
+    if (!isLoadingWabas && availableWabas.some((w) => w.isVisible)) {
       loadLines();
     }
     return () => {
@@ -135,29 +136,18 @@ export default function MetaLinesExportPage() {
         eventSourceRef.current = null;
       }
     };
-  }, [imWabas, isLoadingWabas]);
-
-  const loadImWabas = async () => {
-    try {
-      const res = await fetch('/api/im-wabas');
-      if (!res.ok) throw new Error('Falha ao carregar WABAs do IM');
-      const data: ImWabaDto[] = await res.json();
-      setImWabas(data);
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setIsLoadingWabas(false);
-    }
-  };
+  }, [availableWabas, isLoadingWabas]);
 
   const loadAvailableWabas = async () => {
     try {
       const res = await fetch('/api/meta/wabas');
       if (!res.ok) throw new Error('Falha ao carregar WABAs disponíveis');
-      const data: Waba[] = await res.json();
+      const data: BackofficeWaba[] = await res.json();
       setAvailableWabas(data);
     } catch (e) {
       toast.error((e as Error).message);
+    } finally {
+      setIsLoadingWabas(false);
     }
   };
 
@@ -206,47 +196,32 @@ export default function MetaLinesExportPage() {
     };
   };
 
-  const handleToggleWaba = async (waba: Waba, isChecked: boolean) => {
+  const handleToggleWaba = async (waba: BackofficeWaba, isChecked: boolean) => {
     try {
-      if (isChecked) {
-        const res = await fetch('/api/im-wabas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            wabaId: waba.id,
-            wabaName: waba.name || waba.id,
-          }),
-        });
-
-        if (!res.ok) {
-          const error = await res.text();
-          throw new Error(error || 'Falha ao adicionar WABA');
-        }
-      } else {
-        const res = await fetch(`/api/im-wabas/${waba.id}`, {
-          method: 'DELETE',
-        });
-
-        if (!res.ok) {
-          throw new Error('Falha ao remover WABA');
-        }
+      const res = await fetch(`/api/im-wabas/${waba.externalId}/visibility`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isVisible: isChecked }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Falha ao atualizar visibilidade do WABA');
       }
-
-      await loadImWabas();
+      // Atualiza lista e reinicia streaming
+      await loadAvailableWabas();
+      loadLines();
     } catch (e) {
       toast.error((e as Error).message);
     }
   };
 
-  const isWabaSelected = (wabaId: string) => {
-    return imWabas.some((w) => w.wabaId === wabaId);
-  };
+  const isWabaSelected = (waba: BackofficeWaba) => waba.isVisible === true;
 
   const filteredAvailableWabas = availableWabas.filter((waba) => {
-    const searchLower = wabaSearchTerm?.toLowerCase();
+    const searchLower = (wabaSearchTerm || '').toLowerCase();
     return (
-      waba.id?.toLowerCase().includes(searchLower) ||
-      (waba.name && waba.name?.toLowerCase().includes(searchLower))
+      (waba.externalId?.toLowerCase() || '').includes(searchLower) ||
+      (waba.wabaName?.toLowerCase() || '').includes(searchLower)
     );
   });
 
@@ -683,14 +658,14 @@ export default function MetaLinesExportPage() {
             ) : (
               filteredAvailableWabas.map((waba) => (
                 <FormControlLabel
-                  key={waba.id}
+                  key={waba.externalId}
                   control={
                     <Checkbox
-                      checked={isWabaSelected(waba.id)}
+                      checked={isWabaSelected(waba)}
                       onChange={(e) => handleToggleWaba(waba, e.target.checked)}
                     />
                   }
-                  label={`${waba.name || waba.id} (${waba.id})`}
+                  label={`${waba.wabaName || waba.externalId} (${waba.externalId})`}
                   sx={{ display: 'block', mb: 1 }}
                 />
               ))

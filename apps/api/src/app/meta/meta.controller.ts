@@ -39,7 +39,7 @@ export class MetaController {
 
   @Get('wabas')
   async getWabas() {
-    return this.metaSyncService.getVisibleWabas();
+    return await this.metaSyncService.getAllWabas();
   }
 
   @Get('wabas/:wabaId/lines')

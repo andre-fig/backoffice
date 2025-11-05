@@ -43,3 +43,16 @@ export type MetaLinesStreamEvent =
 export interface ExportLinesCsvQueryDto {
   cacheKey: string;
 }
+
+export interface MetaLineDto {
+  lineId: string;
+  wabaId: string;
+  displayPhoneNumber: string;
+  verifiedName: string;
+  nameStatus: string;
+  status: string;
+  qualityRating: string;
+  isOfficialBusinessAccount: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}

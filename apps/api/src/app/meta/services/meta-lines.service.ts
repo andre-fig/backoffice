@@ -13,6 +13,7 @@ import {
 } from 'rxjs';
 import { MetaService } from '../meta.service';
 import { ImWabasService } from '../../im-wabas/im-wabas.service';
+import { MetaSyncService } from './meta-sync.service';
 import {
   MetaLineRowDto,
   MetaLinesStreamEvent,
@@ -29,6 +30,7 @@ export class MetaLinesService {
   constructor(
     private readonly metaService: MetaService,
     private readonly imWabasService: ImWabasService,
+    private readonly metaSyncService: MetaSyncService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
 
@@ -43,32 +45,21 @@ export class MetaLinesService {
 
         return from(wabas).pipe(
           mergeMap(async (waba) => {
-            const lines = await this.metaService.listLines(waba.id);
+            const lines = await this.metaSyncService.getLinesForWaba(waba.wabaId);
             const lineRows: MetaLineRowDto[] = [];
 
             for (const line of lines) {
-              const details = await this.metaService.getPhoneNumberDetails(
-                line.id
-              );
-
               const statusString = (line.status ?? '').toUpperCase();
-              const qualityString = (
-                details.quality_rating ||
-                line.quality_rating ||
-                ''
-              ).trim();
+              const qualityString = (line.qualityRating || '').trim();
 
               const row: MetaLineRowDto = {
-                id: line.id,
-                line:
-                  details.display_phone_number ??
-                  line.display_phone_number ??
-                  '',
-                wabaId: waba.id,
-                wabaName: waba.name ?? '',
-                name: details.verified_name ?? line.verified_name ?? '',
+                id: line.lineId,
+                line: line.displayPhoneNumber || '',
+                wabaId: waba.wabaId,
+                wabaName: waba.wabaName,
+                name: line.verifiedName || '',
                 active: this.normalizeConnectionStatus(statusString),
-                verified: details.is_official_business_account ? 'Sim' : 'Não',
+                verified: line.isOfficialBusinessAccount ? 'Sim' : 'Não',
                 qualityRating: this.normalizeQualityRating(qualityString),
               };
 
@@ -126,25 +117,20 @@ export class MetaLinesService {
     const rows: MetaLineRowDto[] = [];
 
     for (const waba of wabas) {
-      const lines = await this.metaService.listLines(waba.id);
+      const lines = await this.metaSyncService.getLinesForWaba(waba.wabaId);
 
       for (const line of lines) {
-        const details = await this.metaService.getPhoneNumberDetails(line.id);
         const statusString = (line.status ?? '').toUpperCase();
-        const qualityString = (
-          details.quality_rating ||
-          line.quality_rating ||
-          ''
-        ).trim();
+        const qualityString = (line.qualityRating || '').trim();
 
         rows.push({
-          id: line.id,
-          line: details.display_phone_number ?? line.display_phone_number ?? '',
-          wabaId: waba.id,
-          wabaName: waba.name ?? '',
-          name: details.verified_name ?? line.verified_name ?? '',
+          id: line.lineId,
+          line: line.displayPhoneNumber || '',
+          wabaId: waba.wabaId,
+          wabaName: waba.wabaName,
+          name: line.verifiedName || '',
           active: this.normalizeConnectionStatus(statusString),
-          verified: details.is_official_business_account ? 'Sim' : 'Não',
+          verified: line.isOfficialBusinessAccount ? 'Sim' : 'Não',
           qualityRating: this.normalizeQualityRating(qualityString),
         });
       }
@@ -158,14 +144,7 @@ export class MetaLinesService {
   }
 
   private async getFilteredWabas() {
-    const allWabas = await this.metaService.listWabas();
-    const storedWabaIds = await this.imWabasService.getAllWabaIds();
-
-    if (storedWabaIds.length === 0) {
-      return [];
-    }
-
-    return allWabas.filter((waba) => storedWabaIds.includes(waba.id));
+    return this.imWabasService.getVisibleWabas();
   }
 
   private normalizeQualityRating(rating: string): LineQualityRating {

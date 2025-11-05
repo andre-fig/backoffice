@@ -13,6 +13,7 @@ import { TagEntity } from '../database/db-appchat/entities/tag.entity';
 import { ChatTagEntity } from '../database/db-appchat/entities/chat-tag.entity';
 import { ScheduledRedirectEntity } from '../database/db-backoffice/entities/scheduled-redirect.entity';
 import { ImWabaEntity } from '../database/db-backoffice/entities/im-waba.entity';
+import { MetaLineEntity } from '../database/db-backoffice/entities/meta-line.entity';
 import { Datasources } from '../common/datasources.enum';
 import { VdiModule } from './vdi/vdi.module';
 import { AuthModule } from './auth/auth.module';
@@ -87,7 +88,7 @@ import { ImWabasModule } from './im-wabas/im-wabas.module';
           username: configService.get<string>('DB_BACKOFFICE_USERNAME'),
           password: configService.get<string>('DB_BACKOFFICE_PASSWORD'),
           database: configService.get<string>('DB_BACKOFFICE_DATABASE'),
-          entities: [ScheduledRedirectEntity, ImWabaEntity],
+          entities: [ScheduledRedirectEntity, ImWabaEntity, MetaLineEntity],
           synchronize: true,
           ssl: useSsl,
           ...(useSsl && {

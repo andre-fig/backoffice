@@ -12,9 +12,9 @@ export enum MetaLinesEventType {
 }
 
 export enum LineQualityRating {
-  GREEN = 'GREEN',
-  YELLOW = 'YELLOW',
-  RED = 'RED',
+  HIGH = 'HIGH',
+  MEDIUM = 'MEDIUM',
+  LOW = 'LOW',
   UNKNOWN = 'UNKNOWN',
 }
 

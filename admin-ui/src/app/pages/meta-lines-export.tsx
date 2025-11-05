@@ -37,52 +37,54 @@ export default function MetaLinesExportPage() {
   const [cacheKey, setCacheKey] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(true);
 
-  const { sortBy, sortOrder, handleSort, sortedData: sortedRows } = useSortable(
-    rows,
-    {
-      initialColumn: 'id' as SortableColumn,
-      columns: {
-        id: {
-          accessor: (r) => r.id,
-        },
-        line: {
-          accessor: (r) => r.line,
-        },
-        wabaName: {
-          accessor: (r) => r.wabaName,
-        },
-        name: {
-          accessor: (r) => r.name,
-        },
-        active: {
-          accessor: (r) => r.active,
-          type: 'enum',
-          orderMap: {
-            CONNECTED: 1,
-            DISCONNECTED: 0,
-          },
-        },
-        verified: {
-          accessor: (r) => r.verified,
-          type: 'enum',
-          orderMap: {
-            Sim: 1,
-            Não: 0,
-          },
-        },
-        qualityRating: {
-          accessor: (r) => r.qualityRating,
-          type: 'enum',
-          orderMap: {
-            GREEN: 3,
-            YELLOW: 2,
-            RED: 1,
-            UNKNOWN: 0,
-          },
+  const {
+    sortBy,
+    sortOrder,
+    handleSort,
+    sortedData: sortedRows,
+  } = useSortable(rows, {
+    initialColumn: 'id' as SortableColumn,
+    columns: {
+      id: {
+        accessor: (r) => r.id,
+      },
+      line: {
+        accessor: (r) => r.line,
+      },
+      wabaName: {
+        accessor: (r) => r.wabaName,
+      },
+      name: {
+        accessor: (r) => r.name,
+      },
+      active: {
+        accessor: (r) => r.active,
+        type: 'enum',
+        orderMap: {
+          CONNECTED: 1,
+          DISCONNECTED: 0,
         },
       },
-    }
-  );
+      verified: {
+        accessor: (r) => r.verified,
+        type: 'enum',
+        orderMap: {
+          Sim: 1,
+          Não: 0,
+        },
+      },
+      qualityRating: {
+        accessor: (r) => r.qualityRating,
+        type: 'enum',
+        orderMap: {
+          HIGH: 3,
+          MEDIUM: 2,
+          LOW: 1,
+          UNKNOWN: 0,
+        },
+      },
+    },
+  });
 
   useEffect(() => {
     const eventSource = new EventSource('/api/meta/lines/stream');
@@ -278,10 +280,10 @@ export default function MetaLinesExportPage() {
                       {(() => {
                         let color: 'default' | 'success' | 'warning' | 'error' =
                           'default';
-                        if (row.qualityRating === 'GREEN') color = 'success';
-                        else if (row.qualityRating === 'YELLOW')
+                        if (row.qualityRating === 'HIGH') color = 'success';
+                        else if (row.qualityRating === 'MEDIUM')
                           color = 'warning';
-                        else if (row.qualityRating === 'RED') color = 'error';
+                        else if (row.qualityRating === 'LOW') color = 'error';
                         return (
                           <Chip
                             label={row.qualityRating}

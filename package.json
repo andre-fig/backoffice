@@ -17,6 +17,7 @@
     "@nestjs/core": "^11.0.0",
     "@nestjs/mongoose": "^11.0.3",
     "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/schedule": "^6.0.1",
     "@nestjs/typeorm": "^11.0.0",
     "@types/pdfkit": "^0.17.3",
     "axios": "^1.6.0",

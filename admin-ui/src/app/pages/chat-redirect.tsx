@@ -1,25 +1,79 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, FormControl } from '@mui/material';
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  FormControl,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Chip,
+  Select,
+  MenuItem,
+  InputLabel,
+} from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
-import { RedirectChatsDto } from '@backoffice-monorepo/shared-types';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { ptBR } from 'date-fns/locale';
+import { RedirectListResponseDto } from '@backoffice-monorepo/shared-types';
 
 interface User {
   id: string;
   name: string;
 }
 
+interface Sector {
+  code: string;
+  name: string;
+}
+
 const ChatRedirectForm = () => {
+  const [redirects, setRedirects] = useState<RedirectListResponseDto[]>([]);
+  const [loadingRedirects, setLoadingRedirects] = useState(false);
+  
   const [usersSaida, setUsersSaida] = useState<User[]>([]);
   const [usersDestino, setUsersDestino] = useState<User[]>([]);
-  const [formData, setFormData] = useState<RedirectChatsDto>({
-    sourceUserId: '',
-    destinationUserId: '',
-  });
+  const [sectors, setSectors] = useState<Sector[]>([]);
+  
+  const [selectedSourceUser, setSelectedSourceUser] = useState<User | null>(null);
+  const [selectedDestinationUser, setSelectedDestinationUser] = useState<User | null>(null);
+  const [selectedSector, setSelectedSector] = useState<string>('');
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
 
   const [searchSaida, setSearchSaida] = useState<string>('');
   const [searchDestino, setSearchDestino] = useState<string>('');
   const [loadingSaida, setLoadingSaida] = useState(false);
   const [loadingDestino, setLoadingDestino] = useState(false);
+  const [loadingSectors, setLoadingSectors] = useState(false);
+
+  useEffect(() => {
+    fetchRedirects();
+  }, []);
+
+  const fetchRedirects = async () => {
+    setLoadingRedirects(true);
+    try {
+      const res = await fetch('/api/redirects');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setRedirects(data);
+    } catch (err) {
+      console.error('Failed to fetch redirects', err);
+      alert('Erro ao carregar redirecionamentos.');
+    } finally {
+      setLoadingRedirects(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -101,29 +155,77 @@ const ChatRedirectForm = () => {
     };
   }, [searchDestino]);
 
+  useEffect(() => {
+    if (selectedSourceUser) {
+      fetchUserSectors(selectedSourceUser.id);
+    } else {
+      setSectors([]);
+      setSelectedSector('');
+    }
+  }, [selectedSourceUser]);
+
+  const fetchUserSectors = async (userId: string) => {
+    setLoadingSectors(true);
+    try {
+      const res = await fetch(`/api/redirects/users/${userId}/sectors`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setSectors(data);
+    } catch (err) {
+      console.error('Failed to fetch sectors', err);
+      alert('Erro ao carregar setores do usuário.');
+    } finally {
+      setLoadingSectors(false);
+    }
+  };
+
   const handleSelectSaida = (_: unknown, user: User | null) => {
-    setFormData((prev) => ({ ...prev, sourceUserId: user?.id ?? '' }));
+    setSelectedSourceUser(user);
   };
 
   const handleSelectDestino = (_: unknown, user: User | null) => {
-    setFormData((prev) => ({ ...prev, destinationUserId: user?.id ?? '' }));
+    setSelectedDestinationUser(user);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!selectedSourceUser || !selectedDestinationUser || !selectedSector || !startDate) {
+      alert('Por favor, preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    if (endDate && endDate <= startDate) {
+      alert('A data de fim deve ser maior que a data de início.');
+      return;
+    }
+
     try {
-      const response = await fetch('/api/redirects/chats', {
+      const response = await fetch('/api/redirects/scheduled', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          sourceUserId: selectedSourceUser.id,
+          destinationUserId: selectedDestinationUser.id,
+          sectorCode: selectedSector,
+          startDate: startDate.toISOString(),
+          endDate: endDate ? endDate.toISOString() : null,
+        }),
       });
 
       if (response.ok) {
-        alert('Redirecionamento executado com sucesso!');
+        alert('Redirecionamento agendado com sucesso!');
+        setSelectedSourceUser(null);
+        setSelectedDestinationUser(null);
+        setSelectedSector('');
+        setStartDate(null);
+        setEndDate(null);
+        fetchRedirects();
       } else {
-        alert('Falha ao executar o redirecionamento.');
+        const error = await response.json();
+        alert(`Falha ao agendar o redirecionamento: ${error.message || 'Erro desconhecido'}`);
       }
     } catch (error) {
       console.error('Erro ao enviar o formulário:', error);
@@ -131,56 +233,217 @@ const ChatRedirectForm = () => {
     }
   };
 
+  const handleRemoveRedirect = async (redirect: RedirectListResponseDto) => {
+    if (!confirm(`Deseja realmente remover este redirecionamento?`)) {
+      return;
+    }
+
+    try {
+      const isScheduled = redirect.status === 'scheduled';
+      const response = await fetch(`/api/redirects/${redirect.id}?scheduled=${isScheduled}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        alert('Redirecionamento removido com sucesso!');
+        fetchRedirects();
+      } else {
+        alert('Falha ao remover o redirecionamento.');
+      }
+    } catch (error) {
+      console.error('Erro ao remover redirecionamento:', error);
+      alert('Erro de rede.');
+    }
+  };
+
+  const formatDate = (date: Date | null) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('pt-BR');
+  };
+
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-      <Typography variant="h6">Redirecionar Conversas</Typography>
-      <FormControl fullWidth margin="normal">
-        <Autocomplete
-          options={usersSaida}
-          getOptionLabel={(option) => option.name}
-          isOptionEqualToValue={(o, v) => o.id === v.id}
-          filterOptions={(x) => x}
-          loading={loadingSaida}
-          onChange={handleSelectSaida}
-          onInputChange={(e, value) => setSearchSaida(value)}
-          value={usersSaida.find((u) => u.id === formData.sourceUserId) || null}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Usuário de Origem"
-              placeholder="Digite para buscar"
-              required
-            />
-          )}
-        />
-      </FormControl>
-      <FormControl fullWidth margin="normal">
-        <Autocomplete
-          options={usersDestino}
-          getOptionLabel={(option) => option.name}
-          isOptionEqualToValue={(o, v) => o.id === v.id}
-          filterOptions={(x) => x}
-          loading={loadingDestino}
-          onChange={handleSelectDestino}
-          onInputChange={(e, value) => setSearchDestino(value)}
-          value={
-            usersDestino.find((u) => u.id === formData.destinationUserId) ||
-            null
-          }
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Usuário de Destino"
-              placeholder="Digite para buscar"
-              required
-            />
-          )}
-        />
-      </FormControl>
-      <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
-        Executar Redirecionamento
-      </Button>
-    </Box>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Painel de Redirecionamentos
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+          Gerencie os redirecionamentos de conversas entre usuários
+        </Typography>
+
+        <Box sx={{ mt: 4, mb: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Redirecionamentos Ativos
+          </Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            {redirects.length} redirecionamento(s) ativo(s)
+          </Typography>
+
+          <TableContainer component={Paper} sx={{ mt: 2 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Setor</TableCell>
+                  <TableCell>Usuário de Origem</TableCell>
+                  <TableCell>Usuário de Destino</TableCell>
+                  <TableCell>Data de Início</TableCell>
+                  <TableCell>Data de Fim</TableCell>
+                  <TableCell>Ações</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loadingRedirects ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      Carregando...
+                    </TableCell>
+                  </TableRow>
+                ) : redirects.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      Nenhum redirecionamento encontrado
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  redirects.map((redirect) => (
+                    <TableRow key={redirect.id}>
+                      <TableCell>
+                        <Chip
+                          label={redirect.status === 'active' ? 'Ativo' : 'Agendado'}
+                          color={redirect.status === 'active' ? 'success' : 'warning'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{redirect.sectorName}</TableCell>
+                      <TableCell>
+                        {redirect.sourceUserName || redirect.sourceUserId || '-'}
+                      </TableCell>
+                      <TableCell>{redirect.destinationUserName}</TableCell>
+                      <TableCell>{formatDate(redirect.startDate)}</TableCell>
+                      <TableCell>{formatDate(redirect.endDate)}</TableCell>
+                      <TableCell>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleRemoveRedirect(redirect)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Adicionar Novo Redirecionamento
+          </Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Selecione os usuários e a data de fim do redirecionamento
+          </Typography>
+
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
+            <FormControl fullWidth margin="normal">
+              <Autocomplete
+                options={usersSaida}
+                getOptionLabel={(option) => option.name}
+                isOptionEqualToValue={(o, v) => o.id === v.id}
+                filterOptions={(x) => x}
+                loading={loadingSaida}
+                onChange={handleSelectSaida}
+                onInputChange={(e, value) => setSearchSaida(value)}
+                value={selectedSourceUser}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Usuário de Origem"
+                    placeholder="Digite para buscar"
+                    required
+                  />
+                )}
+              />
+            </FormControl>
+
+            <FormControl fullWidth margin="normal">
+              <InputLabel id="sector-label">Setor</InputLabel>
+              <Select
+                labelId="sector-label"
+                value={selectedSector}
+                onChange={(e) => setSelectedSector(e.target.value)}
+                label="Setor"
+                required
+                disabled={!selectedSourceUser || loadingSectors}
+              >
+                {sectors.map((sector) => (
+                  <MenuItem key={sector.code} value={sector.code}>
+                    {sector.name} ({sector.code})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth margin="normal">
+              <Autocomplete
+                options={usersDestino}
+                getOptionLabel={(option) => option.name}
+                isOptionEqualToValue={(o, v) => o.id === v.id}
+                filterOptions={(x) => x}
+                loading={loadingDestino}
+                onChange={handleSelectDestino}
+                onInputChange={(e, value) => setSearchDestino(value)}
+                value={selectedDestinationUser}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Usuário de Destino"
+                    placeholder="Digite para buscar"
+                    required
+                  />
+                )}
+              />
+            </FormControl>
+
+            <FormControl fullWidth margin="normal">
+              <DatePicker
+                label="Data de Início"
+                value={startDate}
+                onChange={(newValue) => setStartDate(newValue)}
+                minDate={new Date()}
+                slotProps={{
+                  textField: {
+                    required: true,
+                    fullWidth: true,
+                  },
+                }}
+              />
+            </FormControl>
+
+            <FormControl fullWidth margin="normal">
+              <DatePicker
+                label="Data de Fim"
+                value={endDate}
+                onChange={(newValue) => setEndDate(newValue)}
+                minDate={startDate || new Date()}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                  },
+                }}
+              />
+            </FormControl>
+
+            <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
+              Adicionar Redirecionamento
+            </Button>
+          </Box>
+        </Box>
+      </Box>
+    </LocalizationProvider>
   );
 };
 

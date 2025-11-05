@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RedirectsModule } from './redirects/redirects.module';
@@ -10,6 +10,7 @@ import { ChatEntity } from '../database/db-appchat/entities/chat.entity';
 import { SenderEntity } from '../database/db-appchat/entities/sender.entity';
 import { TagEntity } from '../database/db-appchat/entities/tag.entity';
 import { ChatTagEntity } from '../database/db-appchat/entities/chat-tag.entity';
+import { ScheduledRedirectEntity } from '../database/db-redirects/entities/scheduled-redirect.entity';
 import { Datasources } from '../common/datasources.enum';
 import { VdiModule } from './vdi/vdi.module';
 import { InstantMessengerModule } from './instant-messenger/instant-messenger.module';
@@ -23,6 +24,8 @@ import { MetaModule } from './meta/meta.module';
       envFilePath: 'apps/api/.env',
     }),
 
+    ScheduleModule.forRoot(),
+
     // MongooseModule.forRootAsync({
     //   connectionName: 'mongo_instant_messenger',
     //   imports: [ConfigModule],
@@ -32,37 +35,59 @@ import { MetaModule } from './meta/meta.module';
     //   inject: [ConfigService],
     // }),
 
-    // TypeOrmModule.forRootAsync({
-    //   name: Datasources.DB_APPCHAT,
-    //   imports: [ConfigModule],
-    //   useFactory: (configService: ConfigService) => ({
-    //     type: 'postgres',
-    //     host: configService.get<string>('DB_APPCHAT_HOST'),
-    //     port: +configService.get<number>('DB_APPCHAT_PORT'),
-    //     username: configService.get<string>('DB_APPCHAT_USERNAME'),
-    //     password: configService.get<string>('DB_APPCHAT_PASSWORD'),
-    //     database: configService.get<string>('DB_APPCHAT_DATABASE'),
-    //     entities: [
-    //       AccountEntity,
-    //       ChatTagEntity,
-    //       ChatEntity,
-    //       SenderEntity,
-    //       TagEntity,
-    //     ],
-    //     synchronize: false,
-    //     ssl: true,
-    //     extra: {
-    //       ssl: {
-    //         rejectUnauthorized: false,
-    //       },
-    //     },
-    //   }),
-    //   inject: [ConfigService],
-    // }),
+    TypeOrmModule.forRootAsync({
+      name: Datasources.DB_APPCHAT,
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('DB_APPCHAT_HOST'),
+        port: +configService.get<number>('DB_APPCHAT_PORT'),
+        username: configService.get<string>('DB_APPCHAT_USERNAME'),
+        password: configService.get<string>('DB_APPCHAT_PASSWORD'),
+        database: configService.get<string>('DB_APPCHAT_DATABASE'),
+        entities: [
+          AccountEntity,
+          ChatTagEntity,
+          ChatEntity,
+          SenderEntity,
+          TagEntity,
+        ],
+        synchronize: false,
+        ssl: true,
+        extra: {
+          ssl: {
+            rejectUnauthorized: false,
+          },
+        },
+      }),
+      inject: [ConfigService],
+    }),
 
-    // RedirectsModule,
+    TypeOrmModule.forRootAsync({
+      name: Datasources.DB_REDIRECTS,
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('DB_REDIRECTS_HOST'),
+        port: +configService.get<number>('DB_REDIRECTS_PORT'),
+        username: configService.get<string>('DB_REDIRECTS_USERNAME'),
+        password: configService.get<string>('DB_REDIRECTS_PASSWORD'),
+        database: configService.get<string>('DB_REDIRECTS_DATABASE'),
+        entities: [ScheduledRedirectEntity],
+        synchronize: true,
+        ssl: true,
+        extra: {
+          ssl: {
+            rejectUnauthorized: false,
+          },
+        },
+      }),
+      inject: [ConfigService],
+    }),
+
+    RedirectsModule,
     VdiModule,
-    // InstantMessengerModule,
+    InstantMessengerModule,
     AuthModule,
     MetaModule,
   ],

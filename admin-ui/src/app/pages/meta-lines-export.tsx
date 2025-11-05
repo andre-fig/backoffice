@@ -30,6 +30,7 @@ import {
   MetaLinesStreamEvent,
   ImWabaDto,
   Waba,
+  WabaAnalyticsResponseDto,
 } from '@backoffice-monorepo/shared-types';
 
 type SortableColumn =
@@ -53,6 +54,13 @@ export default function MetaLinesExportPage() {
   const [isLoadingWabas, setIsLoadingWabas] = useState(true);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [wabaSearchTerm, setWabaSearchTerm] = useState('');
+  const [analyticsDialogOpen, setAnalyticsDialogOpen] = useState(false);
+  const [selectedLine, setSelectedLine] = useState<MetaLineRowDto | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<WabaAnalyticsResponseDto | null>(null);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+  const today = new Date().toISOString().split('T')[0];
+  const [analyticsStartDate, setAnalyticsStartDate] = useState(today);
+  const [analyticsEndDate, setAnalyticsEndDate] = useState(today);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   const {
@@ -291,6 +299,169 @@ export default function MetaLinesExportPage() {
     }
   };
 
+  const handleLineClick = (row: MetaLineRowDto) => {
+    setSelectedLine(row);
+    setAnalyticsDialogOpen(true);
+    setAnalyticsData(null);
+  };
+
+  const loadLineAnalytics = async () => {
+    if (!selectedLine) return;
+
+    setIsLoadingAnalytics(true);
+    try {
+      const params = new URLSearchParams();
+      if (analyticsStartDate) params.append('startDate', analyticsStartDate);
+      if (analyticsEndDate) params.append('endDate', analyticsEndDate);
+
+      const res = await fetch(`/api/analytics/line/${selectedLine.id}?${params.toString()}`);
+      if (!res.ok) throw new Error('Falha ao carregar analytics');
+      const data: WabaAnalyticsResponseDto = await res.json();
+      setAnalyticsData(data);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setIsLoadingAnalytics(false);
+    }
+  };
+
+  useEffect(() => {
+    if (analyticsDialogOpen && selectedLine) {
+      loadLineAnalytics();
+    }
+  }, [analyticsDialogOpen, selectedLine, analyticsStartDate, analyticsEndDate]);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
+  const getCategoryColor = (category: string): 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'info' => {
+    switch (category) {
+      case 'MARKETING':
+        return 'primary';
+      case 'UTILITY':
+        return 'info';
+      case 'SERVICE':
+        return 'success';
+      case 'AUTHENTICATION':
+        return 'warning';
+      default:
+        return 'default';
+    }
+  };
+
+  const getDirectionColor = (direction: string): 'default' | 'primary' | 'secondary' => {
+    return direction === 'BUSINESS_INITIATED' ? 'primary' : 'secondary';
+  };
+
+  const renderAnalyticsTable = () => {
+    if (isLoadingAnalytics) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <LinearProgress sx={{ width: '100%' }} />
+        </Box>
+      );
+    }
+
+    if (!analyticsData || Object.keys(analyticsData).length === 0) {
+      return (
+        <Typography color="text.secondary" align="center" sx={{ p: 2 }}>
+          Nenhum dado de analytics encontrado para o período selecionado.
+        </Typography>
+      );
+    }
+
+    const analyticsRows: Array<{
+      date: string;
+      category: string;
+      direction: string;
+      conversations: number;
+      cost: number;
+    }> = [];
+
+    Object.entries(analyticsData).forEach(([date, dateData]) => {
+      Object.entries(dateData).forEach(([, lineData]) => {
+        Object.entries(lineData).forEach(([category, categoryData]) => {
+          Object.entries(categoryData).forEach(([direction, directionData]) => {
+            analyticsRows.push({
+              date,
+              category,
+              direction,
+              conversations: directionData.conversations,
+              cost: directionData.cost,
+            });
+          });
+        });
+      });
+    });
+
+    const totalConversations = analyticsRows.reduce((sum, row) => sum + row.conversations, 0);
+    const totalCost = analyticsRows.reduce((sum, row) => sum + row.cost, 0);
+
+    return (
+      <Box>
+        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+          <Paper sx={{ flex: 1, p: 2 }}>
+            <Typography color="text.secondary" variant="body2">
+              Total de Conversas
+            </Typography>
+            <Typography variant="h5">
+              {totalConversations.toLocaleString('pt-BR')}
+            </Typography>
+          </Paper>
+          <Paper sx={{ flex: 1, p: 2 }}>
+            <Typography color="text.secondary" variant="body2">
+              Custo Total
+            </Typography>
+            <Typography variant="h5">
+              {formatCurrency(totalCost)}
+            </Typography>
+          </Paper>
+        </Box>
+
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Data</TableCell>
+                <TableCell>Categoria</TableCell>
+                <TableCell>Direção</TableCell>
+                <TableCell align="right">Conversas</TableCell>
+                <TableCell align="right">Custo</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {analyticsRows.map((row, index) => (
+                <TableRow key={index}>
+                  <TableCell>{row.date}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={row.category}
+                      color={getCategoryColor(row.category)}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={row.direction}
+                      color={getDirectionColor(row.direction)}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell align="right">{row.conversations.toLocaleString('pt-BR')}</TableCell>
+                  <TableCell align="right">{formatCurrency(row.cost)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+    );
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -408,7 +579,12 @@ export default function MetaLinesExportPage() {
                 </TableRow>
               ) : (
                 sortedRows.map((row) => (
-                  <TableRow key={row.id} hover>
+                  <TableRow 
+                    key={row.id} 
+                    hover 
+                    onClick={() => handleLineClick(row)}
+                    sx={{ cursor: 'pointer' }}
+                  >
                     <TableCell>{row.id}</TableCell>
                     <TableCell>{row.line}</TableCell>
                     <TableCell>{row.wabaId}</TableCell>
@@ -504,6 +680,45 @@ export default function MetaLinesExportPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setFilterDialogOpen(false)}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={analyticsDialogOpen}
+        onClose={() => setAnalyticsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Analytics de Custos - {selectedLine?.line}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', gap: 2, mb: 3, mt: 1 }}>
+            <TextField
+              label="Data Inicial"
+              type="date"
+              value={analyticsStartDate}
+              onChange={(e) => setAnalyticsStartDate(e.target.value)}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              size="small"
+            />
+            <TextField
+              label="Data Final"
+              type="date"
+              value={analyticsEndDate}
+              onChange={(e) => setAnalyticsEndDate(e.target.value)}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              size="small"
+            />
+          </Box>
+          {renderAnalyticsTable()}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAnalyticsDialogOpen(false)}>Fechar</Button>
         </DialogActions>
       </Dialog>
     </Box>

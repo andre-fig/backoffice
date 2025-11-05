@@ -4,7 +4,6 @@ import { SnackbarProvider } from 'notistack';
 import Sidebar from './components/Sidebar';
 import ChatRedirectForm from './pages/chat-redirect';
 import MetaLinesExportPage from './pages/meta-lines-export';
-import AnalyticsPage from './pages/analytics';
 import NxWelcome from './nx-welcome';
 
 export function App() {
@@ -27,7 +26,6 @@ export function App() {
             <Route path="/" element={<NxWelcome title="admin-ui" />} />
             <Route path="/redirects/chats" element={<ChatRedirectForm />} />
             <Route path="/meta/lines/export" element={<MetaLinesExportPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
           </Routes>
         </Box>
       </Box>

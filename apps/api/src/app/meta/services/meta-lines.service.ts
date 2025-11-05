@@ -3,7 +3,13 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Observable, from, concatMap, mergeMap } from 'rxjs';
 import { MetaService } from '../meta.service';
-import { MetaLineRowDto, MetaLinesStreamEvent } from '@backoffice-monorepo/shared-types';
+import { 
+  MetaLineRowDto, 
+  MetaLinesStreamEvent, 
+  MetaLinesEventType,
+  LineQualityRating,
+  LineConnectionStatus
+} from '@backoffice-monorepo/shared-types';
 
 @Injectable()
 export class MetaLinesService {
@@ -30,15 +36,18 @@ export class MetaLinesService {
             for (const line of lines) {
               const details = await this.metaService.getPhoneNumberDetails(line.id);
 
+              const statusString = (line.status ?? '').toUpperCase();
+              const qualityString = details.quality_rating ?? line.quality_rating ?? '';
+              
               const row: MetaLineRowDto = {
                 id: line.id,
                 line: details.display_phone_number ?? line.display_phone_number ?? '',
                 wabaId: waba.id,
                 wabaName: waba.name ?? '',
                 name: details.verified_name ?? line.verified_name ?? '',
-                active: (line.status ?? '').toUpperCase(),
+                active: statusString === 'CONNECTED' ? LineConnectionStatus.CONNECTED : LineConnectionStatus.DISCONNECTED,
                 verified: details.is_official_business_account ? 'Sim' : 'Não',
-                qualityRating: details.quality_rating ?? line.quality_rating ?? 'N/A',
+                qualityRating: this.normalizeQualityRating(qualityString),
               };
 
               lineRows.push(row);
@@ -56,14 +65,14 @@ export class MetaLinesService {
         for (const row of lineRows) {
           events.push({
             type: 'message',
-            data: { type: 'row', data: row },
+            data: { type: MetaLinesEventType.ROW, data: row },
           } as MessageEvent<MetaLinesStreamEvent>);
         }
 
         events.push({
           type: 'message',
           data: {
-            type: 'progress',
+            type: MetaLinesEventType.PROGRESS,
             data: { processed: processedLines, total: processedLines },
           },
         } as MessageEvent<MetaLinesStreamEvent>);
@@ -77,7 +86,7 @@ export class MetaLinesService {
         const completeEvent: MessageEvent<MetaLinesStreamEvent> = {
           type: 'message',
           data: {
-            type: 'complete',
+            type: MetaLinesEventType.COMPLETE,
             data: { cacheKey, total: allRows.length },
           },
         } as MessageEvent<MetaLinesStreamEvent>;
@@ -97,6 +106,8 @@ export class MetaLinesService {
 
       for (const line of lines) {
         const details = await this.metaService.getPhoneNumberDetails(line.id);
+        const statusString = (line.status ?? '').toUpperCase();
+        const qualityString = details.quality_rating ?? line.quality_rating ?? '';
 
         rows.push({
           id: line.id,
@@ -104,9 +115,9 @@ export class MetaLinesService {
           wabaId: waba.id,
           wabaName: waba.name ?? '',
           name: details.verified_name ?? line.verified_name ?? '',
-          active: (line.status ?? '').toUpperCase(),
+          active: statusString === 'CONNECTED' ? LineConnectionStatus.CONNECTED : LineConnectionStatus.DISCONNECTED,
           verified: details.is_official_business_account ? 'Sim' : 'Não',
-          qualityRating: details.quality_rating ?? line.quality_rating ?? 'N/A',
+          qualityRating: this.normalizeQualityRating(qualityString),
         });
       }
     }
@@ -116,5 +127,15 @@ export class MetaLinesService {
 
   async getCachedRows(cacheKey: string): Promise<MetaLineRowDto[] | undefined> {
     return this.cacheManager.get<MetaLineRowDto[]>(cacheKey);
+  }
+
+  private normalizeQualityRating(rating: string): LineQualityRating {
+    const upperRating = rating.toUpperCase();
+    
+    if (upperRating === 'GREEN') return LineQualityRating.GREEN;
+    if (upperRating === 'YELLOW') return LineQualityRating.YELLOW;
+    if (upperRating === 'RED') return LineQualityRating.RED;
+    
+    return LineQualityRating.UNKNOWN;
   }
 }

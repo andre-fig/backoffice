@@ -20,7 +20,7 @@ export class MetaSyncService {
     private readonly lineRepository: Repository<LineEntity>
   ) {}
 
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async scheduledSync() {
     this.logger.log('Iniciando sincronização agendada com Meta API');
     await this.syncMetaData();
@@ -86,7 +86,9 @@ export class MetaSyncService {
   private async syncLinesForWaba(wabaId: string): Promise<void> {
     try {
       const metaLines = await this.metaService.listLines(wabaId);
-      this.logger.debug(`Encontradas ${metaLines.length} linhas para WABA ${wabaId}`);
+      this.logger.debug(
+        `Encontradas ${metaLines.length} linhas para WABA ${wabaId}`
+      );
 
       const waba = await this.wabaRepository.findOne({
         where: { externalId: wabaId, externalSource: 'META' },
@@ -104,15 +106,22 @@ export class MetaSyncService {
       const existingLineIds = new Set(existingLines.map((l) => l.externalId));
 
       for (const metaLine of metaLines) {
-        await this.syncLine(waba.id, metaLine.id, existingLineIds.has(metaLine.id));
+        await this.syncLine(
+          waba.id,
+          metaLine.id,
+          existingLineIds.has(metaLine.id)
+        );
       }
 
       const metaLineIds = new Set(metaLines.map((l) => l.id));
-      const linesToRemove = existingLines.filter((l) => !metaLineIds.has(l.externalId));
-      
+      const linesToRemove = existingLines.filter(
+        (l) => !metaLineIds.has(l.externalId)
+      );
       if (linesToRemove.length > 0) {
         await this.lineRepository.remove(linesToRemove);
-        this.logger.log(`Removidas ${linesToRemove.length} linhas obsoletas do WABA ${wabaId}`);
+        this.logger.log(
+          `Removidas ${linesToRemove.length} linhas obsoletas do WABA ${wabaId}`
+        );
       }
     } catch (error) {
       this.logger.error(`Erro ao sincronizar linhas do WABA ${wabaId}`, error);
@@ -120,7 +129,11 @@ export class MetaSyncService {
     }
   }
 
-  private async syncLine(wabaUuid: string, lineId: string, exists: boolean): Promise<void> {
+  private async syncLine(
+    wabaUuid: string,
+    lineId: string,
+    exists: boolean
+  ): Promise<void> {
     try {
       const details = await this.metaService.getPhoneNumberDetails(lineId);
       const displayPhoneNumber = details.display_phone_number || '';
@@ -136,7 +149,8 @@ export class MetaSyncService {
         nameStatus: details.name_status || '',
         status: '', // Will be updated if available from listLines
         qualityRating: details.quality_rating || '',
-        isOfficialBusinessAccount: details.is_official_business_account || false,
+        isOfficialBusinessAccount:
+          details.is_official_business_account || false,
       };
 
       if (exists) {

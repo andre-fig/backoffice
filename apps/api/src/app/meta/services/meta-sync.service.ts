@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { MetaService } from '../meta.service';
-import { ImWabaEntity } from '../../../database/db-backoffice/entities/im-waba.entity';
-import { MetaLineEntity } from '../../../database/db-backoffice/entities/meta-line.entity';
+import { WabaEntity } from '../../../database/db-backoffice/entities/waba.entity';
+import { LineEntity } from '../../../database/db-backoffice/entities/line.entity';
 import { Datasources } from '../../../common/datasources.enum';
 
 @Injectable()
@@ -14,10 +14,10 @@ export class MetaSyncService {
 
   constructor(
     private readonly metaService: MetaService,
-    @InjectRepository(ImWabaEntity, Datasources.DB_BACKOFFICE)
-    private readonly wabaRepository: Repository<ImWabaEntity>,
-    @InjectRepository(MetaLineEntity, Datasources.DB_BACKOFFICE)
-    private readonly lineRepository: Repository<MetaLineEntity>
+    @InjectRepository(WabaEntity, Datasources.DB_BACKOFFICE)
+    private readonly wabaRepository: Repository<WabaEntity>,
+    @InjectRepository(LineEntity, Datasources.DB_BACKOFFICE)
+    private readonly lineRepository: Repository<LineEntity>
   ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
@@ -60,7 +60,7 @@ export class MetaSyncService {
   private async syncWaba(wabaId: string, wabaName: string): Promise<void> {
     try {
       let waba = await this.wabaRepository.findOne({
-        where: { wabaId },
+        where: { externalId: wabaId, externalSource: 'META' },
       });
 
       if (waba) {
@@ -69,7 +69,8 @@ export class MetaSyncService {
         this.logger.debug(`WABA ${wabaId} atualizado`);
       } else {
         waba = this.wabaRepository.create({
-          wabaId,
+          externalId: wabaId,
+          externalSource: 'META',
           wabaName,
           isVisible: false,
         });
@@ -87,18 +88,27 @@ export class MetaSyncService {
       const metaLines = await this.metaService.listLines(wabaId);
       this.logger.debug(`Encontradas ${metaLines.length} linhas para WABA ${wabaId}`);
 
-      const existingLines = await this.lineRepository.find({
-        where: { wabaId },
-        select: ['lineId'],
+      const waba = await this.wabaRepository.findOne({
+        where: { externalId: wabaId, externalSource: 'META' },
       });
-      const existingLineIds = new Set(existingLines.map((l) => l.lineId));
+
+      if (!waba) {
+        this.logger.error(`WABA ${wabaId} não encontrado no banco de dados`);
+        return;
+      }
+
+      const existingLines = await this.lineRepository.find({
+        where: { waba: { id: waba.id } },
+        select: ['externalId'],
+      });
+      const existingLineIds = new Set(existingLines.map((l) => l.externalId));
 
       for (const metaLine of metaLines) {
-        await this.syncLine(wabaId, metaLine.id, existingLineIds.has(metaLine.id));
+        await this.syncLine(waba.id, metaLine.id, existingLineIds.has(metaLine.id));
       }
 
       const metaLineIds = new Set(metaLines.map((l) => l.id));
-      const linesToRemove = existingLines.filter((l) => !metaLineIds.has(l.lineId));
+      const linesToRemove = existingLines.filter((l) => !metaLineIds.has(l.externalId));
       
       if (linesToRemove.length > 0) {
         await this.lineRepository.remove(linesToRemove);
@@ -110,14 +120,18 @@ export class MetaSyncService {
     }
   }
 
-  private async syncLine(wabaId: string, lineId: string, exists: boolean): Promise<void> {
+  private async syncLine(wabaUuid: string, lineId: string, exists: boolean): Promise<void> {
     try {
       const details = await this.metaService.getPhoneNumberDetails(lineId);
+      const displayPhoneNumber = details.display_phone_number || '';
+      const normalizedPhoneNumber = displayPhoneNumber.replace(/[^\d+]/g, '');
 
       const lineData = {
-        lineId,
-        wabaId,
-        displayPhoneNumber: details.display_phone_number || '',
+        externalId: lineId,
+        externalSource: 'META',
+        waba: { id: wabaUuid } as WabaEntity,
+        displayPhoneNumber,
+        normalizedPhoneNumber,
         verifiedName: details.verified_name || '',
         nameStatus: details.name_status || '',
         status: '', // Will be updated if available from listLines
@@ -126,7 +140,10 @@ export class MetaSyncService {
       };
 
       if (exists) {
-        await this.lineRepository.update({ lineId }, lineData);
+        await this.lineRepository.update(
+          { externalId: lineId, externalSource: 'META' },
+          lineData
+        );
         this.logger.debug(`Linha ${lineId} atualizada`);
       } else {
         const line = this.lineRepository.create(lineData);
@@ -138,37 +155,39 @@ export class MetaSyncService {
     }
   }
 
-  async getVisibleWabas(): Promise<ImWabaEntity[]> {
+  async getVisibleWabas(): Promise<WabaEntity[]> {
     return this.wabaRepository.find({
-      where: { isVisible: true },
+      where: { isVisible: true, externalSource: 'META' },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async getAllWabas(): Promise<ImWabaEntity[]> {
+  async getAllWabas(): Promise<WabaEntity[]> {
     return this.wabaRepository.find({
+      where: { externalSource: 'META' },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async getLinesForWaba(wabaId: string): Promise<MetaLineEntity[]> {
+  async getLinesForWaba(wabaId: string): Promise<LineEntity[]> {
     return this.lineRepository.find({
-      where: { wabaId },
+      where: { waba: { externalId: wabaId, externalSource: 'META' } },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async getAllVisibleLines(): Promise<MetaLineEntity[]> {
+  async getAllVisibleLines(): Promise<LineEntity[]> {
     const visibleWabas = await this.getVisibleWabas();
-    const visibleWabaIds = visibleWabas.map((w) => w.wabaId);
+    const visibleWabaUuids = visibleWabas.map((w) => w.id);
 
-    if (visibleWabaIds.length === 0) {
+    if (visibleWabaUuids.length === 0) {
       return [];
     }
 
     return this.lineRepository
       .createQueryBuilder('line')
-      .where('line.wabaId IN (:...wabaIds)', { wabaIds: visibleWabaIds })
+      .leftJoinAndSelect('line.waba', 'waba')
+      .where('waba.id IN (:...wabaIds)', { wabaIds: visibleWabaUuids })
       .orderBy('line.createdAt', 'DESC')
       .getMany();
   }

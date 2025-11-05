@@ -26,6 +26,7 @@ export interface PhoneNumberDetails {
 
 export interface MetaLineRowDto {
   id: string;
+  externalId: string;
   line: string;
   wabaId: string;
   wabaName: string;

@@ -1,7 +1,7 @@
 import { Injectable, Logger, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ImWabaEntity } from '../../database/db-backoffice/entities/im-waba.entity';
+import { WabaEntity } from '../../database/db-backoffice/entities/waba.entity';
 import { Datasources } from '../../common/datasources.enum';
 import { ImWabaDto, AddImWabaDto, UpdateImWabaVisibilityDto } from '@backoffice-monorepo/shared-types';
 
@@ -10,8 +10,8 @@ export class ImWabasService {
   private readonly logger = new Logger(ImWabasService.name);
 
   constructor(
-    @InjectRepository(ImWabaEntity, Datasources.DB_BACKOFFICE)
-    private readonly imWabaRepository: Repository<ImWabaEntity>
+    @InjectRepository(WabaEntity, Datasources.DB_BACKOFFICE)
+    private readonly imWabaRepository: Repository<WabaEntity>
   ) {}
 
   async findAll(): Promise<ImWabaDto[]> {
@@ -23,7 +23,7 @@ export class ImWabasService {
 
   async findOne(wabaId: string): Promise<ImWabaDto | null> {
     const entity = await this.imWabaRepository.findOne({
-      where: { wabaId },
+      where: { externalId: wabaId, externalSource: 'META' },
     });
     return entity ? this.toDto(entity) : null;
   }
@@ -37,7 +37,8 @@ export class ImWabasService {
     }
 
     const entity = this.imWabaRepository.create({
-      wabaId: dto.wabaId,
+      externalId: dto.wabaId,
+      externalSource: 'META',
       wabaName: dto.wabaName,
     });
 
@@ -48,7 +49,7 @@ export class ImWabasService {
 
   async remove(wabaId: string): Promise<void> {
     const entity = await this.imWabaRepository.findOne({
-      where: { wabaId },
+      where: { externalId: wabaId, externalSource: 'META' },
     });
 
     if (!entity) {
@@ -61,14 +62,15 @@ export class ImWabasService {
 
   async getAllWabaIds(): Promise<string[]> {
     const entities = await this.imWabaRepository.find({
-      select: ['wabaId'],
+      where: { externalSource: 'META' },
+      select: ['externalId'],
     });
-    return entities.map((entity) => entity.wabaId);
+    return entities.map((entity) => entity.externalId);
   }
 
   async updateVisibility(dto: UpdateImWabaVisibilityDto): Promise<ImWabaDto> {
     const entity = await this.imWabaRepository.findOne({
-      where: { wabaId: dto.wabaId },
+      where: { externalId: dto.wabaId, externalSource: 'META' },
     });
 
     if (!entity) {
@@ -89,9 +91,9 @@ export class ImWabasService {
     return entities.map((entity) => this.toDto(entity));
   }
 
-  private toDto(entity: ImWabaEntity): ImWabaDto {
+  private toDto(entity: WabaEntity): ImWabaDto {
     return {
-      wabaId: entity.wabaId,
+      wabaId: entity.externalId,
       wabaName: entity.wabaName,
       isVisible: entity.isVisible,
       createdAt: entity.createdAt,

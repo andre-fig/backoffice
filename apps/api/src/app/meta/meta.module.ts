@@ -7,15 +7,15 @@ import { MetaLinesService } from './services/meta-lines.service';
 import { CsvExportService } from './services/csv-export.service';
 import { MetaSyncService } from './services/meta-sync.service';
 import { ImWabasModule } from '../im-wabas/im-wabas.module';
-import { ImWabaEntity } from '../../database/db-backoffice/entities/im-waba.entity';
-import { MetaLineEntity } from '../../database/db-backoffice/entities/meta-line.entity';
+import { WabaEntity } from '../../database/db-backoffice/entities/waba.entity';
+import { LineEntity } from '../../database/db-backoffice/entities/line.entity';
 import { Datasources } from '../../common/datasources.enum';
 
 @Module({
   imports: [
     HttpModule,
     ImWabasModule,
-    TypeOrmModule.forFeature([ImWabaEntity, MetaLineEntity], Datasources.DB_BACKOFFICE),
+    TypeOrmModule.forFeature([WabaEntity, LineEntity], Datasources.DB_BACKOFFICE),
   ],
   controllers: [MetaController],
   providers: [MetaService, MetaLinesService, CsvExportService, MetaSyncService],

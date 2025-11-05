@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { CacheModule } from '@nestjs/cache-manager';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RedirectsModule } from './redirects/redirects.module';
@@ -13,7 +14,6 @@ import { ChatTagEntity } from '../database/db-appchat/entities/chat-tag.entity';
 import { ScheduledRedirectEntity } from '../database/db-redirects/entities/scheduled-redirect.entity';
 import { Datasources } from '../common/datasources.enum';
 import { VdiModule } from './vdi/vdi.module';
-import { InstantMessengerModule } from './instant-messenger/instant-messenger.module';
 import { AuthModule } from './auth/auth.module';
 import { MetaModule } from './meta/meta.module';
 
@@ -26,14 +26,11 @@ import { MetaModule } from './meta/meta.module';
 
     ScheduleModule.forRoot(),
 
-    // MongooseModule.forRootAsync({
-    //   connectionName: 'mongo_instant_messenger',
-    //   imports: [ConfigModule],
-    //   useFactory: (configService: ConfigService) => ({
-    //     uri: configService.get<string>('MONGO_INSTANT_MESSENGER_URI'),
-    //   }),
-    //   inject: [ConfigService],
-    // }),
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 21600000,
+      max: 1000,
+    }),
 
     TypeOrmModule.forRootAsync({
       name: Datasources.DB_APPCHAT,
@@ -87,7 +84,6 @@ import { MetaModule } from './meta/meta.module';
 
     RedirectsModule,
     VdiModule,
-    InstantMessengerModule,
     AuthModule,
     MetaModule,
   ],

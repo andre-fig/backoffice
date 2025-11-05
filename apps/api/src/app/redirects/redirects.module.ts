@@ -9,7 +9,6 @@ import { AccountEntity } from '../../database/db-appchat/entities/account.entity
 import { ChatTagEntity } from '../../database/db-appchat/entities/chat-tag.entity';
 import { ScheduledRedirectEntity } from '../../database/db-redirects/entities/scheduled-redirect.entity';
 import { VdiModule } from '../vdi/vdi.module';
-import { InstantMessengerModule } from '../instant-messenger/instant-messenger.module';
 
 @Module({
   imports: [
@@ -22,7 +21,6 @@ import { InstantMessengerModule } from '../instant-messenger/instant-messenger.m
       Datasources.DB_REDIRECTS
     ),
     VdiModule,
-    InstantMessengerModule,
   ],
   controllers: [RedirectsController],
   providers: [RedirectsService, RedirectsSchedulerService],

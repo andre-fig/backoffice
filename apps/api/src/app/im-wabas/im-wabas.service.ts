@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ImWabaEntity } from '../../database/db-backoffice/entities/im-waba.entity';
 import { Datasources } from '../../common/datasources.enum';
-import { ImWabaDto, AddImWabaDto } from '@backoffice-monorepo/shared-types';
+import { ImWabaDto, AddImWabaDto, UpdateImWabaVisibilityDto } from '@backoffice-monorepo/shared-types';
 
 @Injectable()
 export class ImWabasService {
@@ -66,11 +66,36 @@ export class ImWabasService {
     return entities.map((entity) => entity.wabaId);
   }
 
+  async updateVisibility(dto: UpdateImWabaVisibilityDto): Promise<ImWabaDto> {
+    const entity = await this.imWabaRepository.findOne({
+      where: { wabaId: dto.wabaId },
+    });
+
+    if (!entity) {
+      throw new NotFoundException(`WABA com ID ${dto.wabaId} não encontrado`);
+    }
+
+    entity.isVisible = dto.isVisible;
+    const saved = await this.imWabaRepository.save(entity);
+    this.logger.log(`WABA ${dto.wabaId} visibilidade atualizada para ${dto.isVisible}`);
+    return this.toDto(saved);
+  }
+
+  async getVisibleWabas(): Promise<ImWabaDto[]> {
+    const entities = await this.imWabaRepository.find({
+      where: { isVisible: true },
+      order: { createdAt: 'DESC' },
+    });
+    return entities.map((entity) => this.toDto(entity));
+  }
+
   private toDto(entity: ImWabaEntity): ImWabaDto {
     return {
       wabaId: entity.wabaId,
       wabaName: entity.wabaName,
+      isVisible: entity.isVisible,
       createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
     };
   }
 }

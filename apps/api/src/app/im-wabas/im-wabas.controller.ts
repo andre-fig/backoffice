@@ -3,13 +3,14 @@ import {
   Get,
   Post,
   Delete,
+  Patch,
   Body,
   Param,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import { ImWabasService } from './im-wabas.service';
-import { AddImWabaDto, ImWabaDto } from '@backoffice-monorepo/shared-types';
+import { AddImWabaDto, ImWabaDto, UpdateImWabaVisibilityDto } from '@backoffice-monorepo/shared-types';
 
 @Controller('im-wabas')
 export class ImWabasController {
@@ -20,9 +21,22 @@ export class ImWabasController {
     return this.imWabasService.findAll();
   }
 
+  @Get('visible')
+  async findVisible(): Promise<ImWabaDto[]> {
+    return this.imWabasService.getVisibleWabas();
+  }
+
   @Post()
   async add(@Body() dto: AddImWabaDto): Promise<ImWabaDto> {
     return this.imWabasService.add(dto);
+  }
+
+  @Patch(':wabaId/visibility')
+  async updateVisibility(
+    @Param('wabaId') wabaId: string,
+    @Body() dto: { isVisible: boolean }
+  ): Promise<ImWabaDto> {
+    return this.imWabasService.updateVisibility({ wabaId, isVisible: dto.isVisible });
   }
 
   @Delete(':wabaId')

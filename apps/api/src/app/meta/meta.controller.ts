@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   Query,
   Res,
@@ -14,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { MetaService } from './meta.service';
 import { MetaLinesService } from './services/meta-lines.service';
 import { CsvExportService } from './services/csv-export.service';
+import { MetaSyncService } from './services/meta-sync.service';
 import {
   MetaLinesStreamEvent,
   ExportLinesCsvQueryDto,
@@ -25,17 +27,24 @@ export class MetaController {
   constructor(
     private readonly metaService: MetaService,
     private readonly metaLinesService: MetaLinesService,
-    private readonly csvExportService: CsvExportService
+    private readonly csvExportService: CsvExportService,
+    private readonly metaSyncService: MetaSyncService
   ) {}
+
+  @Post('sync')
+  async syncMetaData() {
+    await this.metaSyncService.syncMetaData();
+    return { message: 'Sincronização iniciada com sucesso' };
+  }
 
   @Get('wabas')
   async getWabas() {
-    return this.metaService.listWabas();
+    return this.metaSyncService.getVisibleWabas();
   }
 
   @Get('wabas/:wabaId/lines')
   async getLines(@Param('wabaId') wabaId: string) {
-    return this.metaService.listLines(wabaId);
+    return this.metaSyncService.getLinesForWaba(wabaId);
   }
 
   @Sse('lines/stream')

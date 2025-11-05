@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ArrayContains, Repository, LessThanOrEqual } from 'typeorm';
+import { ArrayContains, Repository, LessThanOrEqual, In } from 'typeorm';
 import { Datasources } from '../../common/datasources.enum';
 import { ChatEntity } from '../../database/db-appchat/entities/chat.entity';
 import { ContactEntity } from '../../database/db-appchat/entities/contact.entity';
@@ -398,22 +398,21 @@ export class RedirectsService {
       delete account.pool.config.overrides[sectorCode];
       await this.accountEntityRepository.save(account);
 
-      await this.chatEntityRepository
-        .createQueryBuilder('chat')
-        .update(ChatEntity)
-        .set({ userId: sourceUser.id })
-        .where('chat.userId = :destinationUserId', { destinationUserId })
-        .andWhere((qb) => {
-          const subQuery = qb
-            .subQuery()
-            .select('contact.id')
-            .from(ContactEntity, 'contact')
-            .where('contact.sectorCode = :sectorCode')
-            .getQuery();
-          return `chat.contactId IN ${subQuery}`;
-        })
-        .setParameter('sectorCode', sectorCode)
-        .execute();
+      const contacts = await this.contactEntityRepository.find({
+        select: ['id'],
+        where: { sectorCode },
+      });
+      const contactIds = contacts.map((c) => c.id);
+
+      if (contactIds.length > 0) {
+        await this.chatEntityRepository.update(
+          {
+            userId: destinationUserId,
+            contactId: In(contactIds),
+          },
+          { userId: sourceUser.id }
+        );
+      }
     } else {
       throw new NotFoundException(
         `Redirecionamento ativo não encontrado para o setor ${sectorCode}.`
@@ -498,24 +497,21 @@ export class RedirectsService {
       await this.accountEntityRepository.save(account);
     }
 
-    await this.chatEntityRepository
-      .createQueryBuilder('chat')
-      .update(ChatEntity)
-      .set({ userId: sourceUser.id })
-      .where('chat.userId = :destinationUserId', {
-        destinationUserId: redirect.destinationUserId,
-      })
-      .andWhere((qb) => {
-        const subQuery = qb
-          .subQuery()
-          .select('contact.id')
-          .from(ContactEntity, 'contact')
-          .where('contact.sectorCode = :sectorCode')
-          .getQuery();
-        return `chat.contactId IN ${subQuery}`;
-      })
-      .setParameter('sectorCode', redirect.sectorCode)
-      .execute();
+    const contacts = await this.contactEntityRepository.find({
+      select: ['id'],
+      where: { sectorCode: redirect.sectorCode },
+    });
+    const contactIds = contacts.map((c) => c.id);
+
+    if (contactIds.length > 0) {
+      await this.chatEntityRepository.update(
+        {
+          userId: redirect.destinationUserId,
+          contactId: In(contactIds),
+        },
+        { userId: sourceUser.id }
+      );
+    }
   }
 
   private async findUserBySectorCode(

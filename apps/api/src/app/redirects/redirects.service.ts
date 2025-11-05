@@ -52,37 +52,24 @@ export class RedirectsService {
   }> {
     const { sourceUserId, destinationUserId } = redirectChatsDto;
 
-    const sourceUser = await this.vdiService.getUserById(sourceUserId);
-
-    if (!sourceUser?.structs?.sectors?.length || !sourceUser?.groups?.length) {
-      throw new NotFoundException(
-        `Usuário ${sourceUserId} não possui setores ou grupos válidos.`
-      );
-    }
-
-    const destinationUser = await this.vdiService.getUserById(
+    const { sourceUser, destinationUser } = await this.getValidatedUsers(
+      sourceUserId,
       destinationUserId
     );
-
-    if (!destinationUser) {
-      throw new NotFoundException(
-        `Usuário de destino ${destinationUserId} não encontrado no VDI.`
-      );
-    }
 
     const sourceChatsExists = await this.chatEntityRepository.findOne({
       where: { userId: sourceUserId },
     });
 
     if (sourceChatsExists) {
-      await this.redirectOldChats(sourceUser, destinationUser);
+      await this.redirectExistingChats(sourceUser, destinationUser);
     } else {
       this.logger.warn(
         `Usuário de origem ${sourceUserId} não possui chats para redirecionar.`
       );
     }
 
-    await this.redirectFutureChats(sourceUser, destinationUser);
+    await this.configureRoutingOverrides(sourceUser, destinationUser);
 
     return {
       message: `Redirecionamento de chats de ${sourceUser.id} para ${destinationUser.id} concluído.`,
@@ -114,21 +101,7 @@ export class RedirectsService {
     const { sourceUserId, destinationUserId, sectorCode, startDate, endDate } =
       dto;
 
-    const sourceUser = await this.vdiService.getUserById(sourceUserId);
-    if (!sourceUser) {
-      throw new NotFoundException(
-        `Usuário de origem ${sourceUserId} não encontrado.`
-      );
-    }
-
-    const destinationUser = await this.vdiService.getUserById(
-      destinationUserId
-    );
-    if (!destinationUser) {
-      throw new NotFoundException(
-        `Usuário de destino ${destinationUserId} não encontrado.`
-      );
-    }
+    await this.getValidatedUsers(sourceUserId, destinationUserId);
 
     const start = new Date(startDate);
     const end = endDate ? new Date(endDate) : null;
@@ -281,6 +254,34 @@ export class RedirectsService {
     }));
   }
 
+  private async getValidatedUsers(
+    sourceUserId: string,
+    destinationUserId: string
+  ): Promise<{
+    sourceUser: VdiUserResponseDto;
+    destinationUser: VdiUserResponseDto;
+  }> {
+    const sourceUser = await this.vdiService.getUserById(sourceUserId);
+
+    if (!sourceUser?.structs?.sectors?.length || !sourceUser?.groups?.length) {
+      throw new NotFoundException(
+        `Usuário ${sourceUserId} não possui setores ou grupos válidos.`
+      );
+    }
+
+    const destinationUser = await this.vdiService.getUserById(
+      destinationUserId
+    );
+
+    if (!destinationUser) {
+      throw new NotFoundException(
+        `Usuário de destino ${destinationUserId} não encontrado no VDI.`
+      );
+    }
+
+    return { sourceUser, destinationUser };
+  }
+
   private async getActiveRedirects(): Promise<RedirectListResponseDto[]> {
     const accounts = await this.accountEntityRepository.find();
     const activeRedirects: RedirectListResponseDto[] = [];
@@ -397,17 +398,20 @@ export class RedirectsService {
       delete account.pool.config.overrides[sectorCode];
       await this.accountEntityRepository.save(account);
 
-      const contactIdsSubQuery = this.contactEntityRepository
-        .createQueryBuilder('contact')
-        .select('contact.id')
-        .where('contact.cs = :sectorCode');
-
       await this.chatEntityRepository
         .createQueryBuilder('chat')
         .update(ChatEntity)
         .set({ userId: sourceUser.id })
         .where('chat.userId = :destinationUserId', { destinationUserId })
-        .andWhere(`chat.contactId IN (${contactIdsSubQuery.getQuery()})`)
+        .andWhere((qb) => {
+          const subQuery = qb
+            .subQuery()
+            .select('contact.id')
+            .from(ContactEntity, 'contact')
+            .where('contact.sectorCode = :sectorCode')
+            .getQuery();
+          return `chat.contactId IN ${subQuery}`;
+        })
         .setParameter('sectorCode', sectorCode)
         .execute();
     } else {
@@ -494,11 +498,6 @@ export class RedirectsService {
       await this.accountEntityRepository.save(account);
     }
 
-    const contactIdsSubQuery = this.contactEntityRepository
-      .createQueryBuilder('contact')
-      .select('contact.id')
-      .where('contact.cs = :sectorCode');
-
     await this.chatEntityRepository
       .createQueryBuilder('chat')
       .update(ChatEntity)
@@ -506,7 +505,15 @@ export class RedirectsService {
       .where('chat.userId = :destinationUserId', {
         destinationUserId: redirect.destinationUserId,
       })
-      .andWhere(`chat.contactId IN (${contactIdsSubQuery.getQuery()})`)
+      .andWhere((qb) => {
+        const subQuery = qb
+          .subQuery()
+          .select('contact.id')
+          .from(ContactEntity, 'contact')
+          .where('contact.sectorCode = :sectorCode')
+          .getQuery();
+        return `chat.contactId IN ${subQuery}`;
+      })
       .setParameter('sectorCode', redirect.sectorCode)
       .execute();
   }
@@ -531,7 +538,7 @@ export class RedirectsService {
   /**
    * Redireciona chats existentes.
    */
-  private async redirectOldChats(
+  private async redirectExistingChats(
     sourceUser: VdiUserResponseDto,
     destinationUser: VdiUserResponseDto
   ): Promise<{ message: string }> {
@@ -550,9 +557,9 @@ export class RedirectsService {
   }
 
   /**
-   *  Redireciona chats futuros.
+   *  Configura overrides de roteamento para chats futuros.
    */
-  private async redirectFutureChats(
+  private async configureRoutingOverrides(
     sourceUser: VdiUserResponseDto,
     destinationUser: VdiUserResponseDto
   ): Promise<{ message: string }> {

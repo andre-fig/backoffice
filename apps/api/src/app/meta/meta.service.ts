@@ -7,6 +7,11 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { lastValueFrom } from 'rxjs';
+import {
+  Waba,
+  PhoneNumber,
+  PhoneNumberDetails,
+} from '@backoffice-monorepo/shared-types';
 
 interface GraphApiResponse<T> {
   data: T[];
@@ -17,30 +22,6 @@ interface GraphApiResponse<T> {
     };
     next?: string;
   };
-}
-
-interface Waba {
-  id: string;
-  name?: string;
-  [key: string]: unknown;
-}
-
-export interface PhoneNumber {
-  id: string;
-  display_phone_number?: string;
-  verified_name?: string;
-  status?: string;
-  quality_rating?: string;
-  [key: string]: unknown;
-}
-
-export interface PhoneNumberDetails {
-  id: string;
-  display_phone_number?: string;
-  verified_name?: string;
-  name_status?: string;
-  is_official_business_account?: boolean;
-  quality_rating?: string;
 }
 
 type QueryParams = Record<string, string | number | undefined>;

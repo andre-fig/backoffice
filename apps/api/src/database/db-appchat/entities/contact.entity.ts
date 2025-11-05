@@ -6,5 +6,5 @@ export class ContactEntity {
   id: string;
 
   @Column('text', { name: 'cs' })
-  cs: string;
+  sectorCode: string;
 }

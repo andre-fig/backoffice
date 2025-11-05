@@ -1,4 +1,4 @@
-interface MetaData {
+export interface MetaData {
   hasNextPage: boolean;
   next: string | null;
   hasPrevPage: boolean;
@@ -6,7 +6,7 @@ interface MetaData {
   perPage: number;
 }
 
-interface UserData {
+export interface UserData {
   id: string;
   name: string;
   email: string;
@@ -18,4 +18,14 @@ interface UserData {
 export interface VdiUsersDto {
   data: UserData[];
   meta: MetaData;
+}
+
+export interface UserOption {
+  id: string;
+  name: string;
+}
+
+export interface Sector {
+  code: string;
+  name: string;
 }

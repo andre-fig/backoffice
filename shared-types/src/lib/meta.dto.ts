@@ -1,5 +1,29 @@
 import { MetaLinesEventType, LineQualityRating, LineConnectionStatus } from './enums';
 
+export interface Waba {
+  id: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
+export interface PhoneNumber {
+  id: string;
+  display_phone_number?: string;
+  verified_name?: string;
+  status?: string;
+  quality_rating?: string;
+  [key: string]: unknown;
+}
+
+export interface PhoneNumberDetails {
+  id: string;
+  display_phone_number?: string;
+  verified_name?: string;
+  name_status?: string;
+  is_official_business_account?: boolean;
+  quality_rating?: string;
+}
+
 export interface MetaLineRowDto {
   id: string;
   line: string;

@@ -17,6 +17,7 @@ import { CsvExportService } from './services/csv-export.service';
 import {
   MetaLinesStreamEvent,
   ExportLinesCsvQueryDto,
+  MetaLineRowDto,
 } from '@backoffice-monorepo/shared-types';
 
 @Controller('meta')
@@ -50,10 +51,9 @@ export class MetaController {
   ) {
     const { cacheKey } = query;
 
-    let rows;
-    if (!cacheKey) {
-      rows = await this.metaLinesService.buildAllRows();
-    } else {
+    let rows: MetaLineRowDto[];
+
+    if (cacheKey) {
       const cachedRows = await this.metaLinesService.getCachedRows(cacheKey);
       if (!cachedRows) {
         throw new HttpException(
@@ -62,10 +62,12 @@ export class MetaController {
         );
       }
       rows = cachedRows;
+    } else {
+      rows = await this.metaLinesService.buildAllRows();
     }
 
     const csvContent = this.csvExportService.buildCsv(rows);
-    
+
     response.setHeader('Content-Type', 'text/csv; charset=utf-8');
     response.setHeader(
       'Content-Disposition',

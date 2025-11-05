@@ -97,47 +97,32 @@ export default function MetaLinesExportPage() {
       DISCONNECTED: 0,
     };
 
-    return [...rows].sort((a, b) => {
-      let aValue: string | number;
-      let bValue: string | number;
+    const accessors: Record<
+      SortableColumn,
+      (r: MetaLineRowDto) => string | number
+    > = {
+      id: (r) => r.id,
+      line: (r) => r.line,
+      wabaName: (r) => r.wabaName,
+      name: (r) => r.name,
+      active: (r) => statusOrder[r.active] ?? 0,
+      verified: (r) => (r.verified === 'Sim' ? 1 : 0),
+      qualityRating: (r) => qualityOrder[r.qualityRating] ?? 0,
+    };
 
-      if (sortBy === 'id') {
-        aValue = a.id;
-        bValue = b.id;
-      } else if (sortBy === 'line') {
-        aValue = a.line;
-        bValue = b.line;
-      } else if (sortBy === 'wabaName') {
-        aValue = a.wabaName;
-        bValue = b.wabaName;
-      } else if (sortBy === 'name') {
-        aValue = a.name;
-        bValue = b.name;
-      } else if (sortBy === 'active') {
-        aValue = statusOrder[a.active] ?? 0;
-        bValue = statusOrder[b.active] ?? 0;
-      } else if (sortBy === 'verified') {
-        aValue = a.verified === 'Sim' ? 1 : 0;
-        bValue = b.verified === 'Sim' ? 1 : 0;
-      } else if (sortBy === 'qualityRating') {
-        aValue = qualityOrder[a.qualityRating] ?? 0;
-        bValue = qualityOrder[b.qualityRating] ?? 0;
-      } else {
-        aValue = 0;
-        bValue = 0;
+    const accessor = accessors[sortBy];
+
+    const compareValues = (x: string | number, y: string | number) => {
+      if (typeof x === 'string' && typeof y === 'string') {
+        const cmp = x.localeCompare(y, 'pt-BR', { numeric: true });
+        return sortOrder === 'asc' ? cmp : -cmp;
       }
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        const comparison = aValue.localeCompare(bValue, 'pt-BR', {
-          numeric: true,
-        });
-        return sortOrder === 'asc' ? comparison : -comparison;
-      }
-
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      if (x < y) return sortOrder === 'asc' ? -1 : 1;
+      if (x > y) return sortOrder === 'asc' ? 1 : -1;
       return 0;
-    });
+    };
+
+    return [...rows].sort((a, b) => compareValues(accessor(a), accessor(b)));
   }, [rows, sortBy, sortOrder]);
 
   const handleExportCsv = async () => {

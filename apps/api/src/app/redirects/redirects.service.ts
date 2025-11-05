@@ -397,7 +397,6 @@ export class RedirectsService {
       delete account.pool.config.overrides[sectorCode];
       await this.accountEntityRepository.save(account);
 
-      // TODO: ESSA SUBQUERY É DESNECESSÁRIA. REMOVER ELA. Basta atualizar os chats do usuário de destino e setorCode para o sourceUser.
       const contactIdsSubQuery = this.contactEntityRepository
         .createQueryBuilder('contact')
         .select('contact.id')

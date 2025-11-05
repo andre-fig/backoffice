@@ -43,7 +43,6 @@ export interface PhoneNumberDetails {
   quality_rating?: string;
 }
 
-// Reusable type alias for Graph API query parameters
 type QueryParams = Record<string, string | number | undefined>;
 
 @Injectable()

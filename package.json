@@ -23,6 +23,7 @@
     "cache-manager": "^7.2.4",
     "date-fns": "^3.6.0",
     "mongoose": "^8.19.2",
+    "notistack": "^3.0.2",
     "pdfkit": "^0.17.2",
     "pg": "^8.16.3",
     "react": "^19.0.0",

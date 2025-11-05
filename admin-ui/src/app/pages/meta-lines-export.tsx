@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Button,
-  Stack,
   Typography,
-  Alert,
   Table,
   TableBody,
   TableCell,
@@ -14,16 +12,22 @@ import {
   LinearProgress,
   Box,
   Chip,
+  TableSortLabel,
 } from '@mui/material';
 import { MetaLineRowDto, MetaLinesStreamEvent } from '@backoffice-monorepo/shared-types';
+import { useToast } from '../hooks/useToast';
+
+type SortOrder = 'asc' | 'desc';
+type SortableColumn = 'id' | 'line' | 'wabaName' | 'name' | 'active' | 'verified' | 'qualityRating';
 
 export default function MetaLinesExportPage() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const [rows, setRows] = useState<MetaLineRowDto[]>([]);
   const [progress, setProgress] = useState({ processed: 0, total: 0 });
   const [cacheKey, setCacheKey] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(true);
+  const [sortBy, setSortBy] = useState<SortableColumn>('id');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   useEffect(() => {
     const eventSource = new EventSource('/api/meta/lines/stream');
@@ -50,8 +54,7 @@ export default function MetaLinesExportPage() {
 
     eventSource.onerror = (e) => {
       console.error('SSE error:', e);
-      setError('Erro ao carregar dados. Por favor, tente novamente.');
-      setLoading(false);
+      toast.error('Erro ao carregar dados. Por favor, tente novamente.');
       setIsStreaming(false);
       eventSource.close();
     };
@@ -61,9 +64,48 @@ export default function MetaLinesExportPage() {
     };
   }, []);
 
+  const handleSort = (column: SortableColumn) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedRows = useMemo(() => {
+    const qualityOrder = { GREEN: 3, YELLOW: 2, RED: 1, UNKNOWN: 0 };
+    const statusOrder = { CONNECTED: 1, DISCONNECTED: 0 };
+
+    return [...rows].sort((a, b) => {
+      let aValue: string | number = a[sortBy];
+      let bValue: string | number = b[sortBy];
+
+      if (sortBy === 'qualityRating') {
+        aValue = qualityOrder[a.qualityRating as keyof typeof qualityOrder] ?? 0;
+        bValue = qualityOrder[b.qualityRating as keyof typeof qualityOrder] ?? 0;
+      } else if (sortBy === 'active') {
+        aValue = statusOrder[a.active as keyof typeof statusOrder] ?? 0;
+        bValue = statusOrder[b.active as keyof typeof statusOrder] ?? 0;
+      } else if (sortBy === 'verified') {
+        aValue = a.verified === 'Sim' ? 1 : 0;
+        bValue = b.verified === 'Sim' ? 1 : 0;
+      }
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        const comparison = aValue.localeCompare(bValue, 'pt-BR', { numeric: true });
+        return sortOrder === 'asc' ? comparison : -comparison;
+      }
+
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [rows, sortBy, sortOrder]);
+
   const handleExportCsv = async () => {
     if (!cacheKey) {
-      setError('Nenhum dado carregado para exportar.');
+      toast.error('Nenhum dado carregado para exportar.');
       return;
     }
 
@@ -71,7 +113,7 @@ export default function MetaLinesExportPage() {
       const res = await fetch(`/api/meta/export/lines?cacheKey=${cacheKey}`);
       
       if (res.status === 410) {
-        setError('Cache expirado. Por favor, recarregue os dados.');
+        toast.error('Cache expirado. Por favor, recarregue os dados.');
         return;
       }
 
@@ -86,25 +128,22 @@ export default function MetaLinesExportPage() {
       a.download = 'linhas-meta.csv';
       a.click();
       window.URL.revokeObjectURL(url);
+      toast.success('CSV exportado com sucesso!');
     } catch (e) {
-      setError((e as Error).message);
+      toast.error((e as Error).message);
     }
   };
 
   return (
-    <Stack spacing={3}>
-      <Box>
-        <Typography variant="h4" gutterBottom>
-          Exportar Linhas da Meta
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Visualize e exporte todas as linhas do WhatsApp Business
-        </Typography>
-      </Box>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom>
+        Exportar Linhas da Meta
+      </Typography>
+      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+        Visualize e exporte todas as linhas do WhatsApp Business
+      </Typography>
 
-      {error && <Alert severity="error">{error}</Alert>}
-
-      <Box>
+      <Box sx={{ mt: 4 }}>
         <Typography variant="h6" gutterBottom>
           Linhas
         </Typography>
@@ -121,24 +160,80 @@ export default function MetaLinesExportPage() {
           <Table stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Linha</TableCell>
-                <TableCell>WABA</TableCell>
-                <TableCell>Nome</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Verificada</TableCell>
-                <TableCell>Qualidade</TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'id'}
+                    direction={sortBy === 'id' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('id')}
+                  >
+                    ID
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'line'}
+                    direction={sortBy === 'line' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('line')}
+                  >
+                    Linha
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'wabaName'}
+                    direction={sortBy === 'wabaName' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('wabaName')}
+                  >
+                    WABA
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'name'}
+                    direction={sortBy === 'name' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('name')}
+                  >
+                    Nome
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'active'}
+                    direction={sortBy === 'active' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('active')}
+                  >
+                    Status
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'verified'}
+                    direction={sortBy === 'verified' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('verified')}
+                  >
+                    Verificada
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'qualityRating'}
+                    direction={sortBy === 'qualityRating' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('qualityRating')}
+                  >
+                    Qualidade
+                  </TableSortLabel>
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.length === 0 && !isStreaming ? (
+              {sortedRows.length === 0 && !isStreaming ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center">
                     Nenhuma linha encontrada
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map((row) => (
+                sortedRows.map((row) => (
                   <TableRow key={row.id} hover>
                     <TableCell>{row.id}</TableCell>
                     <TableCell>{row.line}</TableCell>
@@ -188,6 +283,6 @@ export default function MetaLinesExportPage() {
           Exportar CSV
         </Button>
       </Box>
-    </Stack>
+    </Box>
   );
 }

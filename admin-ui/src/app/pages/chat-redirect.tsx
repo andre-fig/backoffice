@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -49,6 +49,7 @@ type SortableColumn =
 
 const ChatRedirectForm = () => {
   const toast = useToast();
+  const didInitialize = useRef(false);
   const [redirects, setRedirects] = useState<RedirectListResponseDto[]>([]);
   const [loadingRedirects, setLoadingRedirects] = useState(false);
   const [sortBy, setSortBy] = useState<SortableColumn>('startDate');
@@ -76,6 +77,8 @@ const ChatRedirectForm = () => {
   const [loadingSectors, setLoadingSectors] = useState(false);
 
   useEffect(() => {
+    if (didInitialize.current) return;
+    didInitialize.current = true;
     fetchRedirects();
   }, []);
 

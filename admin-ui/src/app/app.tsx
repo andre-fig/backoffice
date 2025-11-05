@@ -12,6 +12,7 @@ export function App() {
       maxSnack={3}
       anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       autoHideDuration={4000}
+      preventDuplicate
     >
       <Box sx={{ display: 'flex' }}>
         <CssBaseline />

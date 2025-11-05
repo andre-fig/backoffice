@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Button,
   Typography,
@@ -15,12 +15,12 @@ import {
   TableSortLabel,
 } from '@mui/material';
 import { useToast } from '../hooks/useToast';
+import { useSortable } from '../hooks/useSortable';
 import {
   MetaLineRowDto,
   MetaLinesStreamEvent,
 } from '@backoffice-monorepo/shared-types';
 
-type SortOrder = 'asc' | 'desc';
 type SortableColumn =
   | 'id'
   | 'line'
@@ -36,8 +36,53 @@ export default function MetaLinesExportPage() {
   const [progress, setProgress] = useState({ processed: 0, total: 0 });
   const [cacheKey, setCacheKey] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(true);
-  const [sortBy, setSortBy] = useState<SortableColumn>('id');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+
+  const { sortBy, sortOrder, handleSort, sortedData: sortedRows } = useSortable(
+    rows,
+    {
+      initialColumn: 'id' as SortableColumn,
+      columns: {
+        id: {
+          accessor: (r) => r.id,
+        },
+        line: {
+          accessor: (r) => r.line,
+        },
+        wabaName: {
+          accessor: (r) => r.wabaName,
+        },
+        name: {
+          accessor: (r) => r.name,
+        },
+        active: {
+          accessor: (r) => r.active,
+          type: 'enum',
+          orderMap: {
+            CONNECTED: 1,
+            DISCONNECTED: 0,
+          },
+        },
+        verified: {
+          accessor: (r) => r.verified,
+          type: 'enum',
+          orderMap: {
+            Sim: 1,
+            Não: 0,
+          },
+        },
+        qualityRating: {
+          accessor: (r) => r.qualityRating,
+          type: 'enum',
+          orderMap: {
+            GREEN: 3,
+            YELLOW: 2,
+            RED: 1,
+            UNKNOWN: 0,
+          },
+        },
+      },
+    }
+  );
 
   useEffect(() => {
     const eventSource = new EventSource('/api/meta/lines/stream');
@@ -75,55 +120,6 @@ export default function MetaLinesExportPage() {
       eventSource.close();
     };
   }, []);
-
-  const handleSort = (column: SortableColumn) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortOrder('asc');
-    }
-  };
-
-  const sortedRows = useMemo(() => {
-    const qualityOrder: Record<string, number> = {
-      GREEN: 3,
-      YELLOW: 2,
-      RED: 1,
-      UNKNOWN: 0,
-    };
-    const statusOrder: Record<string, number> = {
-      CONNECTED: 1,
-      DISCONNECTED: 0,
-    };
-
-    const accessors: Record<
-      SortableColumn,
-      (r: MetaLineRowDto) => string | number
-    > = {
-      id: (r) => r.id,
-      line: (r) => r.line,
-      wabaName: (r) => r.wabaName,
-      name: (r) => r.name,
-      active: (r) => statusOrder[r.active] ?? 0,
-      verified: (r) => (r.verified === 'Sim' ? 1 : 0),
-      qualityRating: (r) => qualityOrder[r.qualityRating] ?? 0,
-    };
-
-    const accessor = accessors[sortBy];
-
-    const compareValues = (x: string | number, y: string | number) => {
-      if (typeof x === 'string' && typeof y === 'string') {
-        const cmp = x.localeCompare(y, 'pt-BR', { numeric: true });
-        return sortOrder === 'asc' ? cmp : -cmp;
-      }
-      if (x < y) return sortOrder === 'asc' ? -1 : 1;
-      if (x > y) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    };
-
-    return [...rows].sort((a, b) => compareValues(accessor(a), accessor(b)));
-  }, [rows, sortBy, sortOrder]);
 
   const handleExportCsv = async () => {
     if (!cacheKey) {

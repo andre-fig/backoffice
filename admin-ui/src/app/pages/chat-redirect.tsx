@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -27,6 +27,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ptBR } from 'date-fns/locale';
 import { RedirectListResponseDto, RedirectStatus } from '@backoffice-monorepo/shared-types';
 import { useToast } from '../hooks/useToast';
+import { useSortable } from '../hooks/useSortable';
 
 interface User {
   id: string;
@@ -38,7 +39,6 @@ interface Sector {
   name: string;
 }
 
-type SortOrder = 'asc' | 'desc';
 type SortableColumn =
   | 'status'
   | 'sectorName'
@@ -52,8 +52,41 @@ const ChatRedirectForm = () => {
   const didInitialize = useRef(false);
   const [redirects, setRedirects] = useState<RedirectListResponseDto[]>([]);
   const [loadingRedirects, setLoadingRedirects] = useState(false);
-  const [sortBy, setSortBy] = useState<SortableColumn>('startDate');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+
+  const { sortBy, sortOrder, handleSort, sortedData: sortedRedirects } = useSortable(
+    redirects,
+    {
+      initialColumn: 'startDate' as SortableColumn,
+      initialOrder: 'desc',
+      columns: {
+        status: {
+          accessor: (r) => r.status,
+          type: 'enum',
+          orderMap: {
+            [RedirectStatus.ACTIVE]: 0,
+            [RedirectStatus.SCHEDULED]: 1,
+          },
+        },
+        sectorName: {
+          accessor: (r) => r.sectorName || '',
+        },
+        sourceUserName: {
+          accessor: (r) => r.sourceUserName || r.sourceUserId || '',
+        },
+        destinationUserName: {
+          accessor: (r) => r.destinationUserName || '',
+        },
+        startDate: {
+          accessor: (r) => r.startDate,
+          type: 'date',
+        },
+        endDate: {
+          accessor: (r) => r.endDate,
+          type: 'date',
+        },
+      },
+    }
+  );
 
   const [usersSaida, setUsersSaida] = useState<User[]>([]);
   const [usersDestino, setUsersDestino] = useState<User[]>([]);
@@ -96,61 +129,6 @@ const ChatRedirectForm = () => {
       setLoadingRedirects(false);
     }
   };
-
-  const handleSort = (column: SortableColumn) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortOrder('asc');
-    }
-  };
-
-  const sortedRedirects = useMemo(() => {
-    const statusOrder = { 
-      [RedirectStatus.ACTIVE]: 0, 
-      [RedirectStatus.SCHEDULED]: 1 
-    };
-
-    return [...redirects].sort((a, b) => {
-      let aValue: string | number;
-      let bValue: string | number;
-
-      if (sortBy === 'status') {
-        aValue = statusOrder[a.status] ?? 2;
-        bValue = statusOrder[b.status] ?? 2;
-      } else if (sortBy === 'startDate' || sortBy === 'endDate') {
-        const aDate = (a as any)[sortBy] as Date | string | null | undefined;
-        const bDate = (b as any)[sortBy] as Date | string | null | undefined;
-        aValue = aDate ? new Date(aDate).getTime() : 0;
-        bValue = bDate ? new Date(bDate).getTime() : 0;
-      } else if (sortBy === 'sourceUserName') {
-        aValue = a.sourceUserName || a.sourceUserId || '';
-        bValue = b.sourceUserName || b.sourceUserId || '';
-      } else if (sortBy === 'destinationUserName') {
-        aValue = a.destinationUserName || '';
-        bValue = b.destinationUserName || '';
-      } else if (sortBy === 'sectorName') {
-        aValue = a.sectorName || '';
-        bValue = b.sectorName || '';
-      } else {
-        // Fallback to string comparison
-        aValue = String((a as any)[sortBy] ?? '');
-        bValue = String((b as any)[sortBy] ?? '');
-      }
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        const comparison = aValue.localeCompare(bValue, 'pt-BR', {
-          numeric: true,
-        });
-        return sortOrder === 'asc' ? comparison : -comparison;
-      }
-
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [redirects, sortBy, sortOrder]);
 
   useEffect(() => {
     let mounted = true;

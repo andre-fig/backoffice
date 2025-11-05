@@ -1,8 +1,18 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from '@nestjs/cache-manager';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { RedirectsModule } from './redirects/redirects.module';
+import { AccountEntity } from '../database/db-appchat/entities/account.entity';
+import { ChatEntity } from '../database/db-appchat/entities/chat.entity';
+import { SenderEntity } from '../database/db-appchat/entities/sender.entity';
+import { TagEntity } from '../database/db-appchat/entities/tag.entity';
+import { ChatTagEntity } from '../database/db-appchat/entities/chat-tag.entity';
+import { ScheduledRedirectEntity } from '../database/db-redirects/entities/scheduled-redirect.entity';
+import { Datasources } from '../common/datasources.enum';
 import { VdiModule } from './vdi/vdi.module';
 import { AuthModule } from './auth/auth.module';
 import { MetaModule } from './meta/meta.module';
@@ -14,52 +24,66 @@ import { MetaModule } from './meta/meta.module';
       envFilePath: 'apps/api/.env',
     }),
 
+    ScheduleModule.forRoot(),
+
     CacheModule.register({
       isGlobal: true,
       ttl: 21600000,
       max: 1000,
     }),
 
-    // MongooseModule.forRootAsync({
-    //   connectionName: 'mongo_instant_messenger',
-    //   imports: [ConfigModule],
-    //   useFactory: (configService: ConfigService) => ({
-    //     uri: configService.get<string>('MONGO_INSTANT_MESSENGER_URI'),
-    //   }),
-    //   inject: [ConfigService],
-    // }),
+    TypeOrmModule.forRootAsync({
+      name: Datasources.DB_APPCHAT,
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('DB_APPCHAT_HOST'),
+        port: +configService.get<number>('DB_APPCHAT_PORT'),
+        username: configService.get<string>('DB_APPCHAT_USERNAME'),
+        password: configService.get<string>('DB_APPCHAT_PASSWORD'),
+        database: configService.get<string>('DB_APPCHAT_DATABASE'),
+        entities: [
+          AccountEntity,
+          ChatTagEntity,
+          ChatEntity,
+          SenderEntity,
+          TagEntity,
+        ],
+        synchronize: false,
+        ssl: true,
+        extra: {
+          ssl: {
+            rejectUnauthorized: false,
+          },
+        },
+      }),
+      inject: [ConfigService],
+    }),
 
-    // TypeOrmModule.forRootAsync({
-    //   name: Datasources.DB_APPCHAT,
-    //   imports: [ConfigModule],
-    //   useFactory: (configService: ConfigService) => ({
-    //     type: 'postgres',
-    //     host: configService.get<string>('DB_APPCHAT_HOST'),
-    //     port: +configService.get<number>('DB_APPCHAT_PORT'),
-    //     username: configService.get<string>('DB_APPCHAT_USERNAME'),
-    //     password: configService.get<string>('DB_APPCHAT_PASSWORD'),
-    //     database: configService.get<string>('DB_APPCHAT_DATABASE'),
-    //     entities: [
-    //       AccountEntity,
-    //       ChatTagEntity,
-    //       ChatEntity,
-    //       SenderEntity,
-    //       TagEntity,
-    //     ],
-    //     synchronize: false,
-    //     ssl: true,
-    //     extra: {
-    //       ssl: {
-    //         rejectUnauthorized: false,
-    //       },
-    //     },
-    //   }),
-    //   inject: [ConfigService],
-    // }),
+    TypeOrmModule.forRootAsync({
+      name: Datasources.DB_REDIRECTS,
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('DB_REDIRECTS_HOST'),
+        port: +configService.get<number>('DB_REDIRECTS_PORT'),
+        username: configService.get<string>('DB_REDIRECTS_USERNAME'),
+        password: configService.get<string>('DB_REDIRECTS_PASSWORD'),
+        database: configService.get<string>('DB_REDIRECTS_DATABASE'),
+        entities: [ScheduledRedirectEntity],
+        synchronize: true,
+        ssl: true,
+        extra: {
+          ssl: {
+            rejectUnauthorized: false,
+          },
+        },
+      }),
+      inject: [ConfigService],
+    }),
 
-    // RedirectsModule,
+    RedirectsModule,
     VdiModule,
-    // InstantMessengerModule,
     AuthModule,
     MetaModule,
   ],

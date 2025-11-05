@@ -25,7 +25,7 @@ interface Waba {
   [key: string]: unknown;
 }
 
-interface PhoneNumber {
+export interface PhoneNumber {
   id: string;
   display_phone_number?: string;
   verified_name?: string;
@@ -40,6 +40,7 @@ export interface PhoneNumberDetails {
   verified_name?: string;
   name_status?: string;
   is_official_business_account?: boolean;
+  quality_rating?: string;
 }
 
 @Injectable()
@@ -142,7 +143,7 @@ export class MetaService {
   ): Promise<PhoneNumberDetails> {
     return this.request<PhoneNumberDetails>(`/${phoneNumberId}`, {
       fields:
-        'id,display_phone_number,verified_name,name_status,is_official_business_account',
+        'id,display_phone_number,verified_name,name_status,is_official_business_account,quality_rating',
     });
   }
 }

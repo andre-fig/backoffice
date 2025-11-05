@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CacheModule } from '@nestjs/cache-manager';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RedirectsModule } from './redirects/redirects.module';
@@ -20,6 +21,12 @@ import { MetaModule } from './meta/meta.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: 'apps/api/.env',
+    }),
+
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 21600000,
+      max: 1000,
     }),
 
     // MongooseModule.forRootAsync({

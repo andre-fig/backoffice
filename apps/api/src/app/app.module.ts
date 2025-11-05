@@ -11,7 +11,7 @@ import { ChatEntity } from '../database/db-appchat/entities/chat.entity';
 import { SenderEntity } from '../database/db-appchat/entities/sender.entity';
 import { TagEntity } from '../database/db-appchat/entities/tag.entity';
 import { ChatTagEntity } from '../database/db-appchat/entities/chat-tag.entity';
-import { ScheduledRedirectEntity } from '../database/db-redirects/entities/scheduled-redirect.entity';
+import { ScheduledRedirectEntity } from '../database/db-backoffice/entities/scheduled-redirect.entity';
 import { Datasources } from '../common/datasources.enum';
 import { VdiModule } from './vdi/vdi.module';
 import { AuthModule } from './auth/auth.module';
@@ -61,15 +61,15 @@ import { MetaModule } from './meta/meta.module';
     }),
 
     TypeOrmModule.forRootAsync({
-      name: Datasources.DB_REDIRECTS,
+      name: Datasources.DB_BACKOFFICE,
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get<string>('DB_REDIRECTS_HOST'),
-        port: +configService.get<number>('DB_REDIRECTS_PORT'),
-        username: configService.get<string>('DB_REDIRECTS_USERNAME'),
-        password: configService.get<string>('DB_REDIRECTS_PASSWORD'),
-        database: configService.get<string>('DB_REDIRECTS_DATABASE'),
+        host: configService.get<string>('DB_BACKOFFICE_HOST'),
+        port: +configService.get<number>('DB_BACKOFFICE_PORT'),
+        username: configService.get<string>('DB_BACKOFFICE_USERNAME'),
+        password: configService.get<string>('DB_BACKOFFICE_PASSWORD'),
+        database: configService.get<string>('DB_BACKOFFICE_DATABASE'),
         entities: [ScheduledRedirectEntity],
         synchronize: true,
         ssl: true,

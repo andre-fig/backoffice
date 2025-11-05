@@ -6,7 +6,7 @@ import { ChatEntity } from '../../database/db-appchat/entities/chat.entity';
 import { ContactEntity } from '../../database/db-appchat/entities/contact.entity';
 import { AccountEntity } from '../../database/db-appchat/entities/account.entity';
 import { ChatTagEntity } from '../../database/db-appchat/entities/chat-tag.entity';
-import { ScheduledRedirectEntity, RedirectStatus } from '../../database/db-redirects/entities/scheduled-redirect.entity';
+import { ScheduledRedirectEntity, RedirectStatus } from '../../database/db-backoffice/entities/scheduled-redirect.entity';
 import { 
   RedirectChatsDto, 
   CreateScheduledRedirectDto, 
@@ -33,7 +33,7 @@ export class RedirectsService {
     @InjectRepository(ChatTagEntity, Datasources.DB_APPCHAT)
     private readonly chatTagEntityRepository: Repository<ChatTagEntity>,
 
-    @InjectRepository(ScheduledRedirectEntity, Datasources.DB_REDIRECTS)
+    @InjectRepository(ScheduledRedirectEntity, Datasources.DB_BACKOFFICE)
     private readonly scheduledRedirectRepository: Repository<ScheduledRedirectEntity>,
 
     private readonly vdiService: VdiService

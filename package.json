@@ -21,6 +21,7 @@
     "@types/pdfkit": "^0.17.3",
     "axios": "^1.6.0",
     "cache-manager": "^7.2.4",
+    "date-fns": "^3.6.0",
     "mongoose": "^8.19.2",
     "pdfkit": "^0.17.2",
     "pg": "^8.16.3",

@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { DateRangePicker } from '@mui/x-date-pickers-pro/DateRangePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ptBR } from 'date-fns/locale';
@@ -47,8 +47,7 @@ const ChatRedirectForm = () => {
   const [selectedSourceUser, setSelectedSourceUser] = useState<User | null>(null);
   const [selectedDestinationUser, setSelectedDestinationUser] = useState<User | null>(null);
   const [selectedSector, setSelectedSector] = useState<string>('');
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
 
   const [searchSaida, setSearchSaida] = useState<string>('');
   const [searchDestino, setSearchDestino] = useState<string>('');
@@ -190,6 +189,8 @@ const ChatRedirectForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const [startDate, endDate] = dateRange;
+    
     if (!selectedSourceUser || !selectedDestinationUser || !selectedSector || !startDate) {
       alert('Por favor, preencha todos os campos obrigatórios.');
       return;
@@ -220,8 +221,7 @@ const ChatRedirectForm = () => {
         setSelectedSourceUser(null);
         setSelectedDestinationUser(null);
         setSelectedSector('');
-        setStartDate(null);
-        setEndDate(null);
+        setDateRange([null, null]);
         fetchRedirects();
       } else {
         const error = await response.json();
@@ -348,96 +348,82 @@ const ChatRedirectForm = () => {
           </Typography>
 
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-            <FormControl fullWidth margin="normal">
-              <Autocomplete
-                options={usersSaida}
-                getOptionLabel={(option) => option.name}
-                isOptionEqualToValue={(o, v) => o.id === v.id}
-                filterOptions={(x) => x}
-                loading={loadingSaida}
-                onChange={handleSelectSaida}
-                onInputChange={(e, value) => setSearchSaida(value)}
-                value={selectedSourceUser}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Usuário de Origem"
-                    placeholder="Digite para buscar"
-                    required
-                  />
-                )}
-              />
-            </FormControl>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 2 }}>
+              <FormControl>
+                <Autocomplete
+                  options={usersSaida}
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(o, v) => o.id === v.id}
+                  filterOptions={(x) => x}
+                  loading={loadingSaida}
+                  onChange={handleSelectSaida}
+                  onInputChange={(e, value) => setSearchSaida(value)}
+                  value={selectedSourceUser}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Usuário de Origem"
+                      placeholder="Origem"
+                      required
+                    />
+                  )}
+                />
+              </FormControl>
 
-            <FormControl fullWidth margin="normal">
-              <InputLabel id="sector-label">Setor</InputLabel>
-              <Select
-                labelId="sector-label"
-                value={selectedSector}
-                onChange={(e) => setSelectedSector(e.target.value)}
-                label="Setor"
-                required
-                disabled={!selectedSourceUser || loadingSectors}
-              >
-                {sectors.map((sector) => (
-                  <MenuItem key={sector.code} value={sector.code}>
-                    {sector.name} ({sector.code})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+              <FormControl>
+                <InputLabel id="sector-label">Setor</InputLabel>
+                <Select
+                  labelId="sector-label"
+                  value={selectedSector}
+                  onChange={(e) => setSelectedSector(e.target.value)}
+                  label="Setor"
+                  required
+                  disabled={!selectedSourceUser || loadingSectors}
+                >
+                  {sectors.map((sector) => (
+                    <MenuItem key={sector.code} value={sector.code}>
+                      {sector.name} ({sector.code})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-            <FormControl fullWidth margin="normal">
-              <Autocomplete
-                options={usersDestino}
-                getOptionLabel={(option) => option.name}
-                isOptionEqualToValue={(o, v) => o.id === v.id}
-                filterOptions={(x) => x}
-                loading={loadingDestino}
-                onChange={handleSelectDestino}
-                onInputChange={(e, value) => setSearchDestino(value)}
-                value={selectedDestinationUser}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Usuário de Destino"
-                    placeholder="Digite para buscar"
-                    required
-                  />
-                )}
-              />
-            </FormControl>
+              <FormControl>
+                <Autocomplete
+                  options={usersDestino}
+                  getOptionLabel={(option) => option.name}
+                  isOptionEqualToValue={(o, v) => o.id === v.id}
+                  filterOptions={(x) => x}
+                  loading={loadingDestino}
+                  onChange={handleSelectDestino}
+                  onInputChange={(e, value) => setSearchDestino(value)}
+                  value={selectedDestinationUser}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Usuário de Destino"
+                      placeholder="Destino"
+                      required
+                    />
+                  )}
+                />
+              </FormControl>
 
-            <FormControl fullWidth margin="normal">
-              <DatePicker
-                label="Data de Início"
-                value={startDate}
-                onChange={(newValue) => setStartDate(newValue)}
-                minDate={new Date()}
-                slotProps={{
-                  textField: {
-                    required: true,
-                    fullWidth: true,
-                  },
-                }}
-              />
-            </FormControl>
+              <FormControl>
+                <DateRangePicker
+                  value={dateRange}
+                  onChange={(newValue) => setDateRange(newValue)}
+                  localeText={{ start: 'Data de Início', end: 'Data de Fim' }}
+                  slotProps={{
+                    textField: {
+                      required: true,
+                    },
+                  }}
+                />
+              </FormControl>
+            </Box>
 
-            <FormControl fullWidth margin="normal">
-              <DatePicker
-                label="Data de Fim"
-                value={endDate}
-                onChange={(newValue) => setEndDate(newValue)}
-                minDate={startDate || new Date()}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                  },
-                }}
-              />
-            </FormControl>
-
-            <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
+            <Button type="submit" variant="contained" color="primary" fullWidth>
               Adicionar Redirecionamento
             </Button>
           </Box>

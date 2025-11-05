@@ -64,7 +64,7 @@ export class MetaService {
     this.businessId = this.config.get<string>('META_BUSINESS_ID') ?? '';
     const allowed = (this.config.get<string>('META_ALLOWED_WABA_IDS') ?? '')
       .split(',')
-      .map((s) => s.trim())
+      .map((idString) => idString.trim())
       .filter(Boolean);
     this.allowedWabaIds = new Set<string>(allowed);
   }
@@ -85,13 +85,13 @@ export class MetaService {
     };
 
     try {
-      const res = await lastValueFrom<AxiosResponse<R>>(
+      const response = await lastValueFrom<AxiosResponse<R>>(
         this.http.request<R>(config)
       );
-      return res.data;
-    } catch (err) {
+      return response.data;
+    } catch (error) {
       throw new InternalServerErrorException(
-        `Falha ao comunicar com a API da Meta: ${(err as AxiosError).message}`
+        `Falha ao comunicar com a API da Meta: ${(error as AxiosError).message}`
       );
     }
   }
@@ -136,7 +136,7 @@ export class MetaService {
       }
     );
     if (this.allowedWabaIds.size === 0) return wabas;
-    return wabas.filter((w) => this.allowedWabaIds.has(w.id));
+    return wabas.filter((waba) => this.allowedWabaIds.has(waba.id));
   }
 
   async listLines(wabaId: string): Promise<PhoneNumber[]> {

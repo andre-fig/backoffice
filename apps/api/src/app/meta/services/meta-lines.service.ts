@@ -52,8 +52,11 @@ export class MetaLinesService {
               );
 
               const statusString = (line.status ?? '').toUpperCase();
-              const qualityString =
-                (details.quality_rating || line.quality_rating || '').trim();
+              const qualityString = (
+                details.quality_rating ||
+                line.quality_rating ||
+                ''
+              ).trim();
 
               const row: MetaLineRowDto = {
                 id: line.id,
@@ -131,8 +134,11 @@ export class MetaLinesService {
       for (const line of lines) {
         const details = await this.metaService.getPhoneNumberDetails(line.id);
         const statusString = (line.status ?? '').toUpperCase();
-        const qualityString =
-          (details.quality_rating || line.quality_rating || '').trim();
+        const qualityString = (
+          details.quality_rating ||
+          line.quality_rating ||
+          ''
+        ).trim();
 
         rows.push({
           id: line.id,
@@ -160,20 +166,20 @@ export class MetaLinesService {
   private async getFilteredWabas() {
     const allWabas = await this.metaService.listWabas();
     const storedWabaIds = await this.imWabasService.getAllWabaIds();
-    
+
     if (storedWabaIds.length === 0) {
       return [];
     }
-    
+
     return allWabas.filter((waba) => storedWabaIds.includes(waba.id));
   }
 
   private normalizeQualityRating(rating: string): LineQualityRating {
     const upperRating = (rating ?? '').toString().trim().toUpperCase();
 
-    if (upperRating === 'HIGH') return LineQualityRating.HIGH;
-    if (upperRating === 'MEDIUM') return LineQualityRating.MEDIUM;
-    if (upperRating === 'LOW') return LineQualityRating.LOW;
+    if (upperRating === 'GREEN') return LineQualityRating.HIGH;
+    if (upperRating === 'YELLOW') return LineQualityRating.MEDIUM;
+    if (upperRating === 'RED') return LineQualityRating.LOW;
 
     return LineQualityRating.UNKNOWN;
   }

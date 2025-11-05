@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  postgres-redirects:
+    image: postgres:15-alpine
+    container_name: backoffice-postgres-redirects
+    environment:
+      POSTGRES_USER: ${DB_REDIRECTS_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_REDIRECTS_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_REDIRECTS_DATABASE:-redirects_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-redirects-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer:latest
+    container_name: backoffice-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres-redirects
+
+volumes:
+  postgres-redirects-data:

@@ -32,6 +32,9 @@ export class LineEntity {
   @Column('text', { name: 'verified_name', nullable: true })
   verifiedName: string;
 
+  @Column('text', { name: 'name_status', nullable: true })
+  nameStatus: string;
+
   @Column('text', { name: 'status', nullable: true })
   status: string;
 

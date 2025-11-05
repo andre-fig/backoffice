@@ -147,6 +147,7 @@ export class MetaSyncService {
         normalizedPhoneNumber,
         verifiedName: details.verified_name || '',
         status: '',
+        nameStatus: details.name_status || '',
         qualityRating: details.quality_rating || '',
         isOfficialBusinessAccount:
           details.is_official_business_account || false,

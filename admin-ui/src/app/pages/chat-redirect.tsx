@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -17,6 +17,7 @@ import {
   Select,
   MenuItem,
   InputLabel,
+  TableSortLabel,
 } from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -25,6 +26,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ptBR } from 'date-fns/locale';
 import { RedirectListResponseDto } from '@backoffice-monorepo/shared-types';
+import { useToast } from '../hooks/useToast';
 
 interface User {
   id: string;
@@ -36,9 +38,15 @@ interface Sector {
   name: string;
 }
 
+type SortOrder = 'asc' | 'desc';
+type SortableColumn = 'status' | 'sectorName' | 'sourceUserName' | 'destinationUserName' | 'startDate' | 'endDate';
+
 const ChatRedirectForm = () => {
+  const toast = useToast();
   const [redirects, setRedirects] = useState<RedirectListResponseDto[]>([]);
   const [loadingRedirects, setLoadingRedirects] = useState(false);
+  const [sortBy, setSortBy] = useState<SortableColumn>('startDate');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   
   const [usersSaida, setUsersSaida] = useState<User[]>([]);
   const [usersDestino, setUsersDestino] = useState<User[]>([]);
@@ -68,11 +76,49 @@ const ChatRedirectForm = () => {
       setRedirects(data);
     } catch (err) {
       console.error('Failed to fetch redirects', err);
-      alert('Erro ao carregar redirecionamentos.');
+      toast.error('Erro ao carregar redirecionamentos.');
     } finally {
       setLoadingRedirects(false);
     }
   };
+
+  const handleSort = (column: SortableColumn) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedRedirects = useMemo(() => {
+    const statusOrder = { active: 0, scheduled: 1 };
+
+    return [...redirects].sort((a, b) => {
+      let aValue: string | number | Date | null = a[sortBy];
+      let bValue: string | number | Date | null = b[sortBy];
+
+      if (sortBy === 'status') {
+        aValue = statusOrder[a.status as keyof typeof statusOrder] ?? 2;
+        bValue = statusOrder[b.status as keyof typeof statusOrder] ?? 2;
+      } else if (sortBy === 'startDate' || sortBy === 'endDate') {
+        aValue = a[sortBy] ? new Date(a[sortBy] as Date).getTime() : 0;
+        bValue = b[sortBy] ? new Date(b[sortBy] as Date).getTime() : 0;
+      } else if (sortBy === 'sourceUserName') {
+        aValue = a.sourceUserName || a.sourceUserId || '';
+        bValue = b.sourceUserName || b.sourceUserId || '';
+      }
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        const comparison = aValue.localeCompare(bValue, 'pt-BR', { numeric: true });
+        return sortOrder === 'asc' ? comparison : -comparison;
+      }
+
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [redirects, sortBy, sortOrder]);
 
   useEffect(() => {
     let mounted = true;
@@ -172,7 +218,7 @@ const ChatRedirectForm = () => {
       setSectors(data);
     } catch (err) {
       console.error('Failed to fetch sectors', err);
-      alert('Erro ao carregar setores do usuário.');
+      toast.error('Erro ao carregar setores do usuário.');
     } finally {
       setLoadingSectors(false);
     }
@@ -192,12 +238,12 @@ const ChatRedirectForm = () => {
     const [startDate, endDate] = dateRange;
     
     if (!selectedSourceUser || !selectedDestinationUser || !selectedSector || !startDate) {
-      alert('Por favor, preencha todos os campos obrigatórios.');
+      toast.error('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
 
     if (endDate && endDate <= startDate) {
-      alert('A data de fim deve ser maior que a data de início.');
+      toast.error('A data de fim deve ser maior que a data de início.');
       return;
     }
 
@@ -217,7 +263,7 @@ const ChatRedirectForm = () => {
       });
 
       if (response.ok) {
-        alert('Redirecionamento agendado com sucesso!');
+        toast.success('Redirecionamento agendado com sucesso!');
         setSelectedSourceUser(null);
         setSelectedDestinationUser(null);
         setSelectedSector('');
@@ -225,11 +271,11 @@ const ChatRedirectForm = () => {
         fetchRedirects();
       } else {
         const error = await response.json();
-        alert(`Falha ao agendar o redirecionamento: ${error.message || 'Erro desconhecido'}`);
+        toast.error(`Falha ao agendar o redirecionamento: ${error.message || 'Erro desconhecido'}`);
       }
     } catch (error) {
       console.error('Erro ao enviar o formulário:', error);
-      alert('Erro de rede.');
+      toast.error('Erro de rede.');
     }
   };
 
@@ -245,14 +291,14 @@ const ChatRedirectForm = () => {
       });
 
       if (response.ok) {
-        alert('Redirecionamento removido com sucesso!');
+        toast.success('Redirecionamento removido com sucesso!');
         fetchRedirects();
       } else {
-        alert('Falha ao remover o redirecionamento.');
+        toast.error('Falha ao remover o redirecionamento.');
       }
     } catch (error) {
       console.error('Erro ao remover redirecionamento:', error);
-      alert('Erro de rede.');
+      toast.error('Erro de rede.');
     }
   };
 
@@ -283,12 +329,60 @@ const ChatRedirectForm = () => {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Setor</TableCell>
-                  <TableCell>Usuário de Origem</TableCell>
-                  <TableCell>Usuário de Destino</TableCell>
-                  <TableCell>Data de Início</TableCell>
-                  <TableCell>Data de Fim</TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortBy === 'status'}
+                      direction={sortBy === 'status' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('status')}
+                    >
+                      Status
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortBy === 'sectorName'}
+                      direction={sortBy === 'sectorName' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('sectorName')}
+                    >
+                      Setor
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortBy === 'sourceUserName'}
+                      direction={sortBy === 'sourceUserName' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('sourceUserName')}
+                    >
+                      Usuário de Origem
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortBy === 'destinationUserName'}
+                      direction={sortBy === 'destinationUserName' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('destinationUserName')}
+                    >
+                      Usuário de Destino
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortBy === 'startDate'}
+                      direction={sortBy === 'startDate' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('startDate')}
+                    >
+                      Data de Início
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell>
+                    <TableSortLabel
+                      active={sortBy === 'endDate'}
+                      direction={sortBy === 'endDate' ? sortOrder : 'asc'}
+                      onClick={() => handleSort('endDate')}
+                    >
+                      Data de Fim
+                    </TableSortLabel>
+                  </TableCell>
                   <TableCell>Ações</TableCell>
                 </TableRow>
               </TableHead>
@@ -299,14 +393,14 @@ const ChatRedirectForm = () => {
                       Carregando...
                     </TableCell>
                   </TableRow>
-                ) : redirects.length === 0 ? (
+                ) : sortedRedirects.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} align="center">
                       Nenhum redirecionamento encontrado
                     </TableCell>
                   </TableRow>
                 ) : (
-                  redirects.map((redirect) => (
+                  sortedRedirects.map((redirect) => (
                     <TableRow key={redirect.id}>
                       <TableCell>
                         <Chip

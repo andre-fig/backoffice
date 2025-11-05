@@ -47,7 +47,7 @@ export class AnalyticsService {
     this.accessToken = this.config.get<string>('META_ACCESS_TOKEN') ?? '';
   }
 
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async collectAnalytics() {
     this.logger.log('Starting analytics collection cron job');
     

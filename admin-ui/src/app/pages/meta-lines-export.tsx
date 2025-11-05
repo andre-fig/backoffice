@@ -56,7 +56,8 @@ export default function MetaLinesExportPage() {
   const [wabaSearchTerm, setWabaSearchTerm] = useState('');
   const [analyticsDialogOpen, setAnalyticsDialogOpen] = useState(false);
   const [selectedLine, setSelectedLine] = useState<MetaLineRowDto | null>(null);
-  const [analyticsData, setAnalyticsData] = useState<WabaAnalyticsResponseDto | null>(null);
+  const [analyticsData, setAnalyticsData] =
+    useState<WabaAnalyticsResponseDto | null>(null);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
   const today = new Date().toISOString().split('T')[0];
   const [analyticsStartDate, setAnalyticsStartDate] = useState(today);
@@ -242,10 +243,10 @@ export default function MetaLinesExportPage() {
   };
 
   const filteredAvailableWabas = availableWabas.filter((waba) => {
-    const searchLower = wabaSearchTerm.toLowerCase();
+    const searchLower = wabaSearchTerm?.toLowerCase();
     return (
-      waba.id.toLowerCase().includes(searchLower) ||
-      (waba.name && waba.name.toLowerCase().includes(searchLower))
+      waba.id?.toLowerCase().includes(searchLower) ||
+      (waba.name && waba.name?.toLowerCase().includes(searchLower))
     );
   });
 
@@ -280,7 +281,9 @@ export default function MetaLinesExportPage() {
     }
   };
 
-  const getStatusColor = (status: string): 'default' | 'success' | 'warning' | 'error' | 'info' => {
+  const getStatusColor = (
+    status: string
+  ): 'default' | 'success' | 'warning' | 'error' | 'info' => {
     switch (status) {
       case 'CONNECTED':
         return 'success';
@@ -314,7 +317,9 @@ export default function MetaLinesExportPage() {
       if (analyticsStartDate) params.append('startDate', analyticsStartDate);
       if (analyticsEndDate) params.append('endDate', analyticsEndDate);
 
-      const res = await fetch(`/api/analytics/line/${selectedLine.id}?${params.toString()}`);
+      const res = await fetch(
+        `/api/analytics/line/${selectedLine.id}?${params.toString()}`
+      );
       if (!res.ok) throw new Error('Falha ao carregar analytics');
       const data: WabaAnalyticsResponseDto = await res.json();
       setAnalyticsData(data);
@@ -338,7 +343,9 @@ export default function MetaLinesExportPage() {
     }).format(value);
   };
 
-  const getCategoryColor = (category: string): 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'info' => {
+  const getCategoryColor = (
+    category: string
+  ): 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'info' => {
     switch (category) {
       case 'MARKETING':
         return 'primary';
@@ -353,7 +360,9 @@ export default function MetaLinesExportPage() {
     }
   };
 
-  const getDirectionColor = (direction: string): 'default' | 'primary' | 'secondary' => {
+  const getDirectionColor = (
+    direction: string
+  ): 'default' | 'primary' | 'secondary' => {
     return direction === 'BUSINESS_INITIATED' ? 'primary' : 'secondary';
   };
 
@@ -398,7 +407,10 @@ export default function MetaLinesExportPage() {
       });
     });
 
-    const totalConversations = analyticsRows.reduce((sum, row) => sum + row.conversations, 0);
+    const totalConversations = analyticsRows.reduce(
+      (sum, row) => sum + row.conversations,
+      0
+    );
     const totalCost = analyticsRows.reduce((sum, row) => sum + row.cost, 0);
 
     return (
@@ -416,9 +428,7 @@ export default function MetaLinesExportPage() {
             <Typography color="text.secondary" variant="body2">
               Custo Total
             </Typography>
-            <Typography variant="h5">
-              {formatCurrency(totalCost)}
-            </Typography>
+            <Typography variant="h5">{formatCurrency(totalCost)}</Typography>
           </Paper>
         </Box>
 
@@ -451,8 +461,12 @@ export default function MetaLinesExportPage() {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell align="right">{row.conversations.toLocaleString('pt-BR')}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.cost)}</TableCell>
+                  <TableCell align="right">
+                    {row.conversations.toLocaleString('pt-BR')}
+                  </TableCell>
+                  <TableCell align="right">
+                    {formatCurrency(row.cost)}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -472,10 +486,15 @@ export default function MetaLinesExportPage() {
       </Typography>
 
       <Box sx={{ mt: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">
-            Linhas
-          </Typography>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+          }}
+        >
+          <Typography variant="h6">Linhas</Typography>
           <IconButton
             onClick={() => setFilterDialogOpen(true)}
             color="primary"
@@ -579,9 +598,9 @@ export default function MetaLinesExportPage() {
                 </TableRow>
               ) : (
                 sortedRows.map((row) => (
-                  <TableRow 
-                    key={row.id} 
-                    hover 
+                  <TableRow
+                    key={row.id}
+                    hover
                     onClick={() => handleLineClick(row)}
                     sx={{ cursor: 'pointer' }}
                   >
@@ -689,9 +708,7 @@ export default function MetaLinesExportPage() {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
-          Analytics de Custos - {selectedLine?.line}
-        </DialogTitle>
+        <DialogTitle>Analytics de Custos - {selectedLine?.line}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', gap: 2, mb: 3, mt: 1 }}>
             <TextField

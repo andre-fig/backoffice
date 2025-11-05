@@ -10,7 +10,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ImWabasService } from './im-wabas.service';
-import { AddImWabaDto, ImWabaDto, UpdateImWabaVisibilityDto } from '@backoffice-monorepo/shared-types';
+import { AddImWabaDto, ImWabaDto } from '@backoffice-monorepo/shared-types';
 
 @Controller('im-wabas')
 export class ImWabasController {
@@ -36,7 +36,10 @@ export class ImWabasController {
     @Param('wabaId') wabaId: string,
     @Body() dto: { isVisible: boolean }
   ): Promise<ImWabaDto> {
-    return this.imWabasService.updateVisibility({ wabaId, isVisible: dto.isVisible });
+    return this.imWabasService.updateVisibility({
+      wabaId,
+      isVisible: dto.isVisible,
+    });
   }
 
   @Delete(':wabaId')

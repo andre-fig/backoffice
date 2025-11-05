@@ -2,7 +2,7 @@ import { Controller, Get, Param, Query, Res, Sse, Inject, HttpStatus, HttpExcept
 import { Response } from 'express';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-import { Observable, from, concatMap, mergeMap, toArray, map } from 'rxjs';
+import { Observable, from, concatMap, mergeMap, toArray } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
 import { MetaService } from './meta.service';
 import { 
@@ -39,9 +39,8 @@ export class MetaController {
         let processedLines = 0;
 
         return from(wabas).pipe(
-          mergeMap(async (waba, wabaIndex) => {
+          mergeMap(async (waba) => {
             const lines = await this.metaService.listLines(waba.id);
-            const totalLines = lines.length;
 
             const lineRows: MetaLineRowDto[] = [];
 
@@ -65,11 +64,11 @@ export class MetaController {
               processedLines++;
             }
 
-            return { lineRows, processedLines, wabaIndex, totalWabas };
+            return { lineRows, processedLines };
           }, 5)
         );
       }),
-      concatMap(async ({ lineRows, processedLines, wabaIndex, totalWabas }) => {
+      concatMap(async ({ lineRows, processedLines }) => {
         const events: MessageEvent<MetaLinesStreamEvent>[] = [];
 
         for (const row of lineRows) {

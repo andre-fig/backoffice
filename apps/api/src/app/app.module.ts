@@ -1,17 +1,8 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { RedirectsModule } from './redirects/redirects.module';
-import { AccountEntity } from '../database/db-appchat/entities/account.entity';
-import { ChatEntity } from '../database/db-appchat/entities/chat.entity';
-import { SenderEntity } from '../database/db-appchat/entities/sender.entity';
-import { TagEntity } from '../database/db-appchat/entities/tag.entity';
-import { ChatTagEntity } from '../database/db-appchat/entities/chat-tag.entity';
-import { Datasources } from '../common/datasources.enum';
 import { VdiModule } from './vdi/vdi.module';
 import { AuthModule } from './auth/auth.module';
 import { MetaModule } from './meta/meta.module';

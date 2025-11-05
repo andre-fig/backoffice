@@ -65,14 +65,28 @@ export class AnalyticsService {
     }
   }
 
+  private normalizePhoneNumber(phoneNumber: string): string {
+    return phoneNumber.replace(/[^\d+]/g, '');
+  }
+
   async collectAnalyticsForWaba(wabaId: string): Promise<void> {
     try {
       const now = new Date();
       const yesterday = new Date(now);
-      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
-      const yesterdayStart = new Date(yesterday.setHours(0, 0, 0, 0));
-      const todayEnd = new Date(now.setHours(23, 59, 59, 999));
+      const yesterdayStart = new Date(Date.UTC(
+        yesterday.getUTCFullYear(),
+        yesterday.getUTCMonth(),
+        yesterday.getUTCDate(),
+        0, 0, 0, 0
+      ));
+      const todayEnd = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        23, 59, 59, 999
+      ));
 
       const startTimestamp = Math.floor(yesterdayStart.getTime() / 1000);
       const endTimestamp = Math.floor(todayEnd.getTime() / 1000);
@@ -106,17 +120,23 @@ export class AnalyticsService {
 
   private async saveDataPoint(dataPoint: ConversationAnalyticsDataPoint): Promise<void> {
     try {
-      const date = new Date(dataPoint.start * 1000);
-      date.setHours(0, 0, 0, 0);
+      const dateTimestamp = new Date(dataPoint.start * 1000);
+      const date = new Date(Date.UTC(
+        dateTimestamp.getUTCFullYear(),
+        dateTimestamp.getUTCMonth(),
+        dateTimestamp.getUTCDate(),
+        0, 0, 0, 0
+      ));
 
-      const phoneNumber = dataPoint.phone_number;
+      const normalizedPhoneNumber = this.normalizePhoneNumber(dataPoint.phone_number);
       
-      const line = await this.metaLineRepository.findOne({
-        where: { displayPhoneNumber: phoneNumber },
-      });
+      const lines = await this.metaLineRepository.find();
+      const line = lines.find(l => 
+        this.normalizePhoneNumber(l.displayPhoneNumber || '') === normalizedPhoneNumber
+      );
 
       if (!line) {
-        this.logger.warn(`Line not found for phone number ${phoneNumber}, skipping data point`);
+        this.logger.warn(`Line not found for phone number ${dataPoint.phone_number} (normalized: ${normalizedPhoneNumber}), skipping data point`);
         return;
       }
 
@@ -157,13 +177,10 @@ export class AnalyticsService {
     endDate?: string
   ): Promise<WabaAnalyticsResponseDto> {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
-    const start = startDate ? new Date(startDate) : today;
-    const end = endDate ? new Date(endDate) : today;
-    
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
+    const start = startDate ? new Date(startDate + 'T00:00:00.000Z') : today;
+    const end = endDate ? new Date(endDate + 'T23:59:59.999Z') : today;
 
     const lines = await this.metaLineRepository.find({
       where: { wabaId },
@@ -179,6 +196,27 @@ export class AnalyticsService {
       .createQueryBuilder('analytics')
       .leftJoinAndSelect('analytics.line', 'line')
       .where('analytics.lineId IN (:...lineIds)', { lineIds })
+      .andWhere('analytics.date BETWEEN :start AND :end', { start, end })
+      .getMany();
+
+    return this.transformAnalyticsData(analytics);
+  }
+
+  async getLineAnalytics(
+    lineId: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<WabaAnalyticsResponseDto> {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const start = startDate ? new Date(startDate + 'T00:00:00.000Z') : today;
+    const end = endDate ? new Date(endDate + 'T23:59:59.999Z') : today;
+
+    const analytics = await this.analyticsRepository
+      .createQueryBuilder('analytics')
+      .leftJoinAndSelect('analytics.line', 'line')
+      .where('analytics.lineId = :lineId', { lineId })
       .andWhere('analytics.date BETWEEN :start AND :end', { start, end })
       .getMany();
 

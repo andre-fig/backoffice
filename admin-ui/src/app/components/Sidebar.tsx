@@ -35,11 +35,6 @@ const Sidebar = () => {
               <ListItemText primary="Exportar Linhas da Meta" />
             </ListItemButton>
           </ListItem>
-          <ListItem key="analytics" disablePadding>
-            <ListItemButton component={Link} to="/analytics">
-              <ListItemText primary="Analytics de Custos" />
-            </ListItemButton>
-          </ListItem>
         </List>
       </Box>
     </Drawer>

@@ -17,4 +17,16 @@ export class AnalyticsController {
       query.endDate
     );
   }
+
+  @Get('line/:lineId')
+  async getLineAnalytics(
+    @Param('lineId') lineId: string,
+    @Query() query: GetWabaAnalyticsQueryDto
+  ): Promise<WabaAnalyticsResponseDto> {
+    return this.analyticsService.getLineAnalytics(
+      lineId,
+      query.startDate,
+      query.endDate
+    );
+  }
 }

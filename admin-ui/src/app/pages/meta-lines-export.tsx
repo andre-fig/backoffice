@@ -25,7 +25,11 @@ import {
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useToast } from '../hooks/useToast';
 import { useSortable } from '../hooks/useSortable';
-import { MetaLineRowDto, MetaLinesStreamEvent, WabaAnalyticsResponseDto } from '@backoffice-monorepo/shared-types';
+import {
+  MetaLineRowDto,
+  MetaLinesStreamEvent,
+  WabaAnalyticsResponseDto,
+} from '@backoffice-monorepo/shared-types';
 
 // Backoffice WABA as returned by /api/meta/wabas
 type BackofficeWaba = {
@@ -665,7 +669,9 @@ export default function MetaLinesExportPage() {
                       onChange={(e) => handleToggleWaba(waba, e.target.checked)}
                     />
                   }
-                  label={`${waba.wabaName || waba.externalId} (${waba.externalId})`}
+                  label={`${waba.wabaName || waba.externalId} (${
+                    waba.externalId
+                  })`}
                   sx={{ display: 'block', mb: 1 }}
                 />
               ))

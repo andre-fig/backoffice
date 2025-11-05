@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { WabaEntity } from './waba.entity';
 
 @Entity('lines')
@@ -22,9 +31,6 @@ export class LineEntity {
 
   @Column('text', { name: 'verified_name', nullable: true })
   verifiedName: string;
-
-  @Column('text', { name: 'name_status', nullable: true })
-  nameStatus: string;
 
   @Column('text', { name: 'status', nullable: true })
   status: string;

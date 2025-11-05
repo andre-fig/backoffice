@@ -1,4 +1,8 @@
-import { MetaLinesEventType, LineQualityRating, LineConnectionStatus } from './enums';
+import {
+  MetaLinesEventType,
+  LineQualityRating,
+  LineConnectionStatus,
+} from './enums';
 
 export interface Waba {
   id: string;
@@ -38,22 +42,15 @@ export interface MetaLineRowDto {
 
 export type MetaLinesStreamEvent =
   | { type: MetaLinesEventType.ROW; data: MetaLineRowDto }
-  | { type: MetaLinesEventType.PROGRESS; data: { processed: number; total: number } }
-  | { type: MetaLinesEventType.COMPLETE; data: { cacheKey: string; total: number } };
+  | {
+      type: MetaLinesEventType.PROGRESS;
+      data: { processed: number; total: number };
+    }
+  | {
+      type: MetaLinesEventType.COMPLETE;
+      data: { cacheKey: string; total: number };
+    };
 
 export interface ExportLinesCsvQueryDto {
   cacheKey: string;
-}
-
-export interface MetaLineDto {
-  lineId: string;
-  wabaId: string;
-  displayPhoneNumber: string;
-  verifiedName: string;
-  nameStatus: string;
-  status: string;
-  qualityRating: string;
-  isOfficialBusinessAccount: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
 }

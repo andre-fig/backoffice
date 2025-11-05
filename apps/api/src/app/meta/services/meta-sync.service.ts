@@ -146,8 +146,7 @@ export class MetaSyncService {
         displayPhoneNumber,
         normalizedPhoneNumber,
         verifiedName: details.verified_name || '',
-        nameStatus: details.name_status || '',
-        status: '', // Will be updated if available from listLines
+        status: '',
         qualityRating: details.quality_rating || '',
         isOfficialBusinessAccount:
           details.is_official_business_account || false,

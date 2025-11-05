@@ -1,27 +1,27 @@
-interface VdiResponsible {
+export interface VdiResponsible {
   id: string;
   name: string;
   email: string;
 }
 
-interface VdiGroup {
+export interface VdiGroup {
   id: string;
   name: string;
   responsibles: VdiResponsible[];
 }
 
-interface VdiSector {
+export interface VdiSector {
   branch: number;
   id: number;
   name: string;
   code: string;
 }
 
-interface VdiStructs {
+export interface VdiStructs {
   sectors: VdiSector[];
 }
 
-interface VdiProfile {
+export interface VdiProfile {
   id: string;
   name: string;
   code: string;

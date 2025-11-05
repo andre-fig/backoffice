@@ -1,4 +1,3 @@
-/// <reference types='vitest' />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
@@ -9,8 +8,6 @@ export default defineConfig(() => ({
   cacheDir: '../node_modules/.vite/admin-ui',
   resolve: {
     alias: {
-      // date-fns v3 no longer provides the legacy "esm" subpath used by some optimizers
-      // Ensure any accidental resolutions to date-fns/esm/* map to the v3 entry points
       'date-fns/esm': 'date-fns',
     },
   },
@@ -31,13 +28,9 @@ export default defineConfig(() => ({
   },
   plugins: [react(), nxViteTsPaths(), nxCopyAssetsPlugin(['*.md'])],
   optimizeDeps: {
-    // Avoid pre-bundling date-fns to prevent esbuild from rewriting imports to legacy paths
     exclude: ['date-fns'],
   },
-  // Uncomment this if you are using workers.
-  // worker: {
-  //  plugins: [ nxViteTsPaths() ],
-  // },
+
   build: {
     outDir: '../dist/admin-ui',
     emptyOutDir: true,

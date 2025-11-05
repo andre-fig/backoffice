@@ -31,10 +31,9 @@ import {
   WabaAnalyticsResponseDto,
 } from '@backoffice-monorepo/shared-types';
 
-// Backoffice WABA as returned by /api/meta/wabas
 type BackofficeWaba = {
-  id: string; // UUID (internal)
-  externalId: string; // Meta WABA ID
+  id: string;
+  externalId: string;
   wabaName: string;
   isVisible: boolean;
 };
@@ -130,7 +129,6 @@ export default function MetaLinesExportPage() {
   }, []);
 
   useEffect(() => {
-    // Inicia o streaming quando houver pelo menos um WABA visível
     if (!isLoadingWabas && availableWabas.some((w) => w.isVisible)) {
       loadLines();
     }
@@ -211,7 +209,6 @@ export default function MetaLinesExportPage() {
         const text = await res.text();
         throw new Error(text || 'Falha ao atualizar visibilidade do WABA');
       }
-      // Atualiza lista e reinicia streaming
       await loadAvailableWabas();
       loadLines();
     } catch (e) {

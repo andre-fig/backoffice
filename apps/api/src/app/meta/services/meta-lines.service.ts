@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import {
@@ -24,8 +24,8 @@ import {
 
 @Injectable()
 export class MetaLinesService {
-  private readonly logger = new Logger(MetaLinesService.name);
-  private readonly cacheTtl = 21600000; // 6 hours
+  SIX_HOURS_IN_MS = 6 * 60 * 60 * 1000;
+  private readonly cacheTtl = this.SIX_HOURS_IN_MS;
 
   constructor(
     private readonly metaService: MetaService,
@@ -45,7 +45,9 @@ export class MetaLinesService {
 
         return from(wabas).pipe(
           mergeMap(async (waba) => {
-            const lines = await this.metaSyncService.getLinesForWaba(waba.wabaId);
+            const lines = await this.metaSyncService.getLinesForWaba(
+              waba.wabaId
+            );
             const lineRows: MetaLineRowDto[] = [];
 
             for (const line of lines) {
@@ -166,7 +168,8 @@ export class MetaLinesService {
     if (upperStatus === 'PENDING') return LineConnectionStatus.PENDING;
     if (upperStatus === 'FLAGGED') return LineConnectionStatus.FLAGGED;
     if (upperStatus === 'MIGRATED') return LineConnectionStatus.MIGRATED;
-    if (upperStatus === 'DISCONNECTED') return LineConnectionStatus.DISCONNECTED;
+    if (upperStatus === 'DISCONNECTED')
+      return LineConnectionStatus.DISCONNECTED;
 
     return LineConnectionStatus.UNKNOWN;
   }

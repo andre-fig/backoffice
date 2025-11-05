@@ -9,6 +9,9 @@ export class ChatEntity {
   @Column('text', { name: 'user_id' })
   userId: string;
 
+  @Column('text', { name: 'contact_id' })
+  contactId: string;
+
   @OneToMany(() => ChatTagEntity, (chatTag) => chatTag.chat)
   tags: ChatTagEntity[];
 }

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ArrayContains, Repository, LessThanOrEqual } from 'typeorm';
 import { Datasources } from '../../common/datasources.enum';
 import { ChatEntity } from '../../database/db-appchat/entities/chat.entity';
+import { ContactEntity } from '../../database/db-appchat/entities/contact.entity';
 import { AccountEntity } from '../../database/db-appchat/entities/account.entity';
 import { ChatTagEntity } from '../../database/db-appchat/entities/chat-tag.entity';
 import { ScheduledRedirectEntity, RedirectStatus } from '../../database/db-redirects/entities/scheduled-redirect.entity';
@@ -25,6 +26,9 @@ export class RedirectsService {
 
     @InjectRepository(ChatEntity, Datasources.DB_APPCHAT)
     private readonly chatEntityRepository: Repository<ChatEntity>,
+
+    @InjectRepository(ContactEntity, Datasources.DB_APPCHAT)
+    private readonly contactEntityRepository: Repository<ContactEntity>,
 
     @InjectRepository(ChatTagEntity, Datasources.DB_APPCHAT)
     private readonly chatTagEntityRepository: Repository<ChatTagEntity>,
@@ -335,14 +339,20 @@ export class RedirectsService {
       await this.accountEntityRepository.save(account);
 
       await this.chatEntityRepository
-        .createQueryBuilder()
+        .createQueryBuilder('chat')
         .update(ChatEntity)
         .set({ userId: sourceUser.id })
-        .where('userId = :destinationUserId', { destinationUserId })
-        .andWhere(
-          'id IN (SELECT c.id FROM chats c INNER JOIN contacts ct ON c.contact_id = ct.id WHERE ct.cs = :sectorCode)',
-          { sectorCode }
-        )
+        .where('chat.userId = :destinationUserId', { destinationUserId })
+        .andWhere((qb) => {
+          const subQuery = qb
+            .subQuery()
+            .select('contact.id')
+            .from(ContactEntity, 'contact')
+            .where('contact.cs = :sectorCode')
+            .getQuery();
+          return `chat.contactId IN ${subQuery}`;
+        })
+        .setParameter('sectorCode', sectorCode)
         .execute();
     } else {
       throw new NotFoundException(`Redirecionamento ativo não encontrado para o setor ${sectorCode}.`);
@@ -413,14 +423,20 @@ export class RedirectsService {
     }
 
     await this.chatEntityRepository
-      .createQueryBuilder()
+      .createQueryBuilder('chat')
       .update(ChatEntity)
       .set({ userId: sourceUser.id })
-      .where('userId = :destinationUserId', { destinationUserId: redirect.destinationUserId })
-      .andWhere(
-        'id IN (SELECT c.id FROM chats c INNER JOIN contacts ct ON c.contact_id = ct.id WHERE ct.cs = :sectorCode)',
-        { sectorCode: redirect.sectorCode }
-      )
+      .where('chat.userId = :destinationUserId', { destinationUserId: redirect.destinationUserId })
+      .andWhere((qb) => {
+        const subQuery = qb
+          .subQuery()
+          .select('contact.id')
+          .from(ContactEntity, 'contact')
+          .where('contact.cs = :sectorCode')
+          .getQuery();
+        return `chat.contactId IN ${subQuery}`;
+      })
+      .setParameter('sectorCode', redirect.sectorCode)
       .execute();
   }
 

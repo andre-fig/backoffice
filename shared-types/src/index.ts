@@ -6,3 +6,4 @@ export * from './lib/meta.dto';
 export * from './lib/scheduled-redirect.dto';
 export * from './lib/enums';
 export * from './lib/im-waba.dto';
+export * from './lib/analytics.dto';

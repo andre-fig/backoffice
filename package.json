@@ -3,10 +3,11 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
+    "typeorm": "ts-node -r tsconfig-paths/register -P apps/api/tsconfig.app.json ./node_modules/typeorm/cli.js",
     "migration:run": "npm run typeorm -- migration:run -d apps/api/src/database/db-backoffice/data-source.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d apps/api/src/database/db-backoffice/data-source.ts",
-    "migration:show": "npm run typeorm -- migration:show -d apps/api/src/database/db-backoffice/data-source.ts"
+    "migration:show": "npm run typeorm -- migration:show -d apps/api/src/database/db-backoffice/data-source.ts",
+    "migration:generate": "npm run typeorm -- migration:generate apps/api/src/database/db-backoffice/migrations/$npm_config_name -d apps/api/src/database/db-backoffice/data-source.ts"
   },
   "private": true,
   "dependencies": {

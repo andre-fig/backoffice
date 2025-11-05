@@ -5,6 +5,7 @@ This directory contains TypeORM migrations for the db_backoffice database.
 ## Running Migrations
 
 ### Prerequisites
+
 - Ensure your `.env` file has the correct database credentials:
   - `DB_BACKOFFICE_HOST`
   - `DB_BACKOFFICE_PORT`
@@ -24,6 +25,9 @@ npm run migration:run
 
 # Revert the last migration
 npm run migration:revert
+
+# Generate a new migration (pass a name)
+npm run migration:generate --name=AddYourMigrationName
 ```
 
 ## Migration Order
@@ -31,6 +35,7 @@ npm run migration:revert
 The migrations must be run in order:
 
 1. **1762376880000-AddUuidColumnsAndExternalIds.ts** (Phase 1 - Additive)
+
    - Adds UUID columns to all three tables (wabas, lines, analytics)
    - Adds external_id and external_source columns
    - Adds normalized_phone_number to lines
@@ -62,11 +67,13 @@ The migrations must be run in order:
 ## What These Migrations Do
 
 ### Phase 1: Additive Changes (Non-Breaking)
+
 - Adds new UUID-based columns alongside existing text-based IDs
 - Backfills data so both old and new columns have values
 - Application can continue using old columns during this phase
 
 ### Phase 2: Swap & Cleanup (Breaking)
+
 - Switches primary keys from text to UUID
 - Renames tables to simpler names
 - Removes old text-based ID columns

@@ -8,7 +8,7 @@ import { ChatEntity } from '../../database/db-appchat/entities/chat.entity';
 import { ContactEntity } from '../../database/db-appchat/entities/contact.entity';
 import { AccountEntity } from '../../database/db-appchat/entities/account.entity';
 import { ChatTagEntity } from '../../database/db-appchat/entities/chat-tag.entity';
-import { ScheduledRedirectEntity } from '../../database/db-redirects/entities/scheduled-redirect.entity';
+import { ScheduledRedirectEntity } from '../../database/db-backoffice/entities/scheduled-redirect.entity';
 import { VdiModule } from '../vdi/vdi.module';
 
 @Module({
@@ -19,7 +19,7 @@ import { VdiModule } from '../vdi/vdi.module';
     ),
     TypeOrmModule.forFeature(
       [ScheduledRedirectEntity],
-      Datasources.DB_REDIRECTS
+      Datasources.DB_BACKOFFICE
     ),
     VdiModule,
   ],

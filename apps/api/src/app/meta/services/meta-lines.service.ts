@@ -53,7 +53,8 @@ export class MetaLinesService {
               const qualityString = (line.qualityRating || '').trim();
 
               const row: MetaLineRowDto = {
-                id: line.lineId,
+                id: line.id,
+                externalId: line.externalId,
                 line: line.displayPhoneNumber || '',
                 wabaId: waba.wabaId,
                 wabaName: waba.wabaName,
@@ -124,7 +125,8 @@ export class MetaLinesService {
         const qualityString = (line.qualityRating || '').trim();
 
         rows.push({
-          id: line.lineId,
+          id: line.id,
+          externalId: line.externalId,
           line: line.displayPhoneNumber || '',
           wabaId: waba.wabaId,
           wabaName: waba.wabaName,

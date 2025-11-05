@@ -12,9 +12,9 @@ import { SenderEntity } from '../database/db-appchat/entities/sender.entity';
 import { TagEntity } from '../database/db-appchat/entities/tag.entity';
 import { ChatTagEntity } from '../database/db-appchat/entities/chat-tag.entity';
 import { ScheduledRedirectEntity } from '../database/db-backoffice/entities/scheduled-redirect.entity';
-import { ImWabaEntity } from '../database/db-backoffice/entities/im-waba.entity';
-import { MetaLineEntity } from '../database/db-backoffice/entities/meta-line.entity';
-import { ConversationAnalyticsEntity } from '../database/db-backoffice/entities/conversation-analytics.entity';
+import { WabaEntity } from '../database/db-backoffice/entities/waba.entity';
+import { LineEntity } from '../database/db-backoffice/entities/line.entity';
+import { AnalyticsEntity } from '../database/db-backoffice/entities/analytics.entity';
 import { Datasources } from '../common/datasources.enum';
 import { VdiModule } from './vdi/vdi.module';
 import { AuthModule } from './auth/auth.module';
@@ -90,8 +90,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
           username: configService.get<string>('DB_BACKOFFICE_USERNAME'),
           password: configService.get<string>('DB_BACKOFFICE_PASSWORD'),
           database: configService.get<string>('DB_BACKOFFICE_DATABASE'),
-          entities: [ScheduledRedirectEntity, ImWabaEntity, MetaLineEntity, ConversationAnalyticsEntity],
-          synchronize: true,
+          entities: [ScheduledRedirectEntity, WabaEntity, LineEntity, AnalyticsEntity],
+          synchronize: false,
           ssl: useSsl,
           ...(useSsl && {
             extra: {

@@ -5,8 +5,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
-import { ConversationAnalyticsEntity } from '../../database/db-backoffice/entities/conversation-analytics.entity';
-import { MetaLineEntity } from '../../database/db-backoffice/entities/meta-line.entity';
+import { AnalyticsEntity } from '../../database/db-backoffice/entities/analytics.entity';
+import { LineEntity } from '../../database/db-backoffice/entities/line.entity';
 import { ImWabasService } from '../im-wabas/im-wabas.service';
 import { Datasources } from '../../common/datasources.enum';
 import { WabaAnalyticsResponseDto } from '@backoffice-monorepo/shared-types';
@@ -34,10 +34,10 @@ export class AnalyticsService {
   private readonly accessToken: string;
 
   constructor(
-    @InjectRepository(ConversationAnalyticsEntity, Datasources.DB_BACKOFFICE)
-    private readonly analyticsRepository: Repository<ConversationAnalyticsEntity>,
-    @InjectRepository(MetaLineEntity, Datasources.DB_BACKOFFICE)
-    private readonly metaLineRepository: Repository<MetaLineEntity>,
+    @InjectRepository(AnalyticsEntity, Datasources.DB_BACKOFFICE)
+    private readonly analyticsRepository: Repository<AnalyticsEntity>,
+    @InjectRepository(LineEntity, Datasources.DB_BACKOFFICE)
+    private readonly lineRepository: Repository<LineEntity>,
     private readonly imWabasService: ImWabasService,
     private readonly http: HttpService,
     private readonly config: ConfigService
@@ -130,10 +130,9 @@ export class AnalyticsService {
 
       const normalizedPhoneNumber = this.normalizePhoneNumber(dataPoint.phone_number);
       
-      const lines = await this.metaLineRepository.find();
-      const line = lines.find(l => 
-        this.normalizePhoneNumber(l.displayPhoneNumber || '') === normalizedPhoneNumber
-      );
+      const line = await this.lineRepository.findOne({
+        where: { normalizedPhoneNumber, externalSource: 'META' },
+      });
 
       if (!line) {
         this.logger.warn(`Line not found for phone number ${dataPoint.phone_number} (normalized: ${normalizedPhoneNumber}), skipping data point`);
@@ -142,7 +141,7 @@ export class AnalyticsService {
 
       const existing = await this.analyticsRepository.findOne({
         where: {
-          lineId: line.lineId,
+          lineId: line.id,
           date: date,
           conversationCategory: dataPoint.conversation_category,
           conversationDirection: dataPoint.conversation_direction,
@@ -153,10 +152,10 @@ export class AnalyticsService {
         existing.conversationCount = dataPoint.conversation;
         existing.cost = dataPoint.cost;
         await this.analyticsRepository.save(existing);
-        this.logger.debug(`Updated analytics for line ${line.lineId} on ${date.toISOString()}`);
+        this.logger.debug(`Updated analytics for line ${line.id} on ${date.toISOString()}`);
       } else {
         const analytics = this.analyticsRepository.create({
-          lineId: line.lineId,
+          lineId: line.id,
           date: date,
           conversationCategory: dataPoint.conversation_category,
           conversationDirection: dataPoint.conversation_direction,
@@ -164,7 +163,7 @@ export class AnalyticsService {
           cost: dataPoint.cost,
         });
         await this.analyticsRepository.save(analytics);
-        this.logger.debug(`Created analytics for line ${line.lineId} on ${date.toISOString()}`);
+        this.logger.debug(`Created analytics for line ${line.id} on ${date.toISOString()}`);
       }
     } catch (error) {
       this.logger.error('Error saving data point', error);
@@ -182,20 +181,12 @@ export class AnalyticsService {
     const start = startDate ? new Date(startDate + 'T00:00:00.000Z') : today;
     const end = endDate ? new Date(endDate + 'T23:59:59.999Z') : today;
 
-    const lines = await this.metaLineRepository.find({
-      where: { wabaId },
-    });
-
-    const lineIds = lines.map(line => line.lineId);
-
-    if (lineIds.length === 0) {
-      return {};
-    }
-
     const analytics = await this.analyticsRepository
       .createQueryBuilder('analytics')
       .leftJoinAndSelect('analytics.line', 'line')
-      .where('analytics.lineId IN (:...lineIds)', { lineIds })
+      .leftJoinAndSelect('line.waba', 'waba')
+      .where('waba.externalId = :wabaId', { wabaId })
+      .andWhere('waba.externalSource = :source', { source: 'META' })
       .andWhere('analytics.date BETWEEN :start AND :end', { start, end })
       .getMany();
 
@@ -224,7 +215,7 @@ export class AnalyticsService {
   }
 
   private transformAnalyticsData(
-    analytics: ConversationAnalyticsEntity[]
+    analytics: AnalyticsEntity[]
   ): WabaAnalyticsResponseDto {
     const result: WabaAnalyticsResponseDto = {};
 

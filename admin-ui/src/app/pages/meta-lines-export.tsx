@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Button,
   Stack,
@@ -18,21 +18,14 @@ import {
 import { MetaLineRowDto, MetaLinesStreamEvent } from '@backoffice-monorepo/shared-types';
 
 export default function MetaLinesExportPage() {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<MetaLineRowDto[]>([]);
   const [progress, setProgress] = useState({ processed: 0, total: 0 });
   const [cacheKey, setCacheKey] = useState<string | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(true);
 
-  const handleLoadData = () => {
-    setLoading(true);
-    setError(null);
-    setRows([]);
-    setProgress({ processed: 0, total: 0 });
-    setCacheKey(null);
-    setIsStreaming(true);
-
+  useEffect(() => {
     const eventSource = new EventSource('/api/meta/lines/stream');
 
     eventSource.onmessage = (event) => {
@@ -62,7 +55,11 @@ export default function MetaLinesExportPage() {
       setIsStreaming(false);
       eventSource.close();
     };
-  };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
 
   const handleExportCsv = async () => {
     if (!cacheKey) {
@@ -107,52 +104,41 @@ export default function MetaLinesExportPage() {
 
       {error && <Alert severity="error">{error}</Alert>}
 
-      <Stack direction="row" spacing={2}>
-        <Button
-          variant="contained"
-          onClick={handleLoadData}
-          disabled={loading || isStreaming}
-        >
-          {loading || isStreaming ? 'Carregando...' : 'Carregar Dados'}
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={handleExportCsv}
-          disabled={!cacheKey || isStreaming}
-        >
-          Exportar CSV
-        </Button>
-      </Stack>
+      <Box>
+        <Typography variant="h6" gutterBottom>
+          Linhas
+        </Typography>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          {isStreaming 
+            ? `Carregando... ${progress.processed} de ${progress.total || '?'} linha(s)`
+            : `${rows.length} linha(s) encontrada(s)`
+          }
+        </Typography>
 
-      {isStreaming && (
-        <Box>
-          <Typography variant="body2" gutterBottom>
-            Carregando linhas... {progress.processed} de {progress.total || '?'}
-          </Typography>
-          <LinearProgress />
-        </Box>
-      )}
+        {isStreaming && <LinearProgress sx={{ mb: 2 }} />}
 
-      {rows.length > 0 && (
-        <Box>
-          <Typography variant="h6" gutterBottom>
-            {rows.length} linha(s) carregada(s)
-          </Typography>
-          <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
-            <Table stickyHeader>
-              <TableHead>
+        <TableContainer component={Paper} sx={{ maxHeight: 600, mb: 2 }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell>ID</TableCell>
+                <TableCell>Linha</TableCell>
+                <TableCell>WABA</TableCell>
+                <TableCell>Nome</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Verificada</TableCell>
+                <TableCell>Qualidade</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rows.length === 0 && !isStreaming ? (
                 <TableRow>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Linha</TableCell>
-                  <TableCell>WABA</TableCell>
-                  <TableCell>Nome</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Verificada</TableCell>
-                  <TableCell>Qualidade</TableCell>
+                  <TableCell colSpan={7} align="center">
+                    Nenhuma linha encontrada
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map((row) => (
+              ) : (
+                rows.map((row) => (
                   <TableRow key={row.id} hover>
                     <TableCell>{row.id}</TableCell>
                     <TableCell>{row.line}</TableCell>
@@ -188,12 +174,20 @@ export default function MetaLinesExportPage() {
                       />
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        <Button
+          variant="contained"
+          onClick={handleExportCsv}
+          disabled={!cacheKey || isStreaming}
+        >
+          Exportar CSV
+        </Button>
+      </Box>
     </Stack>
   );
 }

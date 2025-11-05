@@ -1,10 +1,21 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, Delete, Patch, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Get,
+  Delete,
+  Patch,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { RedirectsService } from './redirects.service';
-import { 
-  RedirectChatsDto, 
-  CreateScheduledRedirectDto, 
+import {
+  RedirectChatsDto,
+  CreateScheduledRedirectDto,
   UpdateRedirectEndDateDto,
-  RedirectListResponseDto 
+  RedirectListResponseDto,
 } from '@backoffice-monorepo/shared-types';
 
 @Controller('redirects')
@@ -37,8 +48,10 @@ export class RedirectsController {
     @Param('id') id: string,
     @Query('scheduled') scheduled?: string
   ): Promise<{ message: string }> {
-    const isScheduled = scheduled === 'true';
-    return await this.redirectsService.removeRedirect(id, isScheduled);
+    if (scheduled === 'true') {
+      return await this.redirectsService.cancelScheduledRedirect(id);
+    }
+    return await this.redirectsService.removeActiveRedirectByCompositeId(id);
   }
 
   @Patch(':id/end-date')

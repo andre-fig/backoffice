@@ -1,14 +1,24 @@
-import { Controller, Get, Param, Query, Res, Sse, Inject, HttpStatus, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  Res,
+  Sse,
+  Inject,
+  HttpStatus,
+  HttpException,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Observable, from, concatMap, mergeMap, toArray } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
 import { MetaService } from './meta.service';
-import { 
-  MetaLineRowDto, 
+import {
+  MetaLineRowDto,
   MetaLinesStreamEvent,
-  ExportLinesCsvQueryDto 
+  ExportLinesCsvQueryDto,
 } from '@backoffice-monorepo/shared-types';
 
 @Controller('meta')
@@ -34,8 +44,7 @@ export class MetaController {
     const allRows: MetaLineRowDto[] = [];
 
     return from(this.metaService.listWabas()).pipe(
-      concatMap(wabas => {
-        const totalWabas = wabas.length;
+      concatMap((wabas) => {
         let processedLines = 0;
 
         return from(wabas).pipe(
@@ -44,19 +53,24 @@ export class MetaController {
 
             const lineRows: MetaLineRowDto[] = [];
 
-            for (let i = 0; i < lines.length; i++) {
-              const line = lines[i];
-              const details = await this.metaService.getPhoneNumberDetails(line.id);
+            for (const line of lines) {
+              const details = await this.metaService.getPhoneNumberDetails(
+                line.id
+              );
 
               const row: MetaLineRowDto = {
                 id: line.id,
-                line: details.display_phone_number ?? line.display_phone_number ?? '',
+                line:
+                  details.display_phone_number ??
+                  line.display_phone_number ??
+                  '',
                 wabaId: waba.id,
                 wabaName: waba.name ?? '',
                 name: details.verified_name ?? line.verified_name ?? '',
                 active: (line.status ?? '').toUpperCase(),
                 verified: details.is_official_business_account ? 'Sim' : 'Não',
-                qualityRating: details.quality_rating ?? line.quality_rating ?? 'N/A',
+                qualityRating:
+                  details.quality_rating ?? line.quality_rating ?? 'N/A',
               };
 
               lineRows.push(row);
@@ -80,30 +94,30 @@ export class MetaController {
 
         events.push({
           type: 'message',
-          data: { 
-            type: 'progress', 
-            data: { processed: processedLines, total: processedLines } 
+          data: {
+            type: 'progress',
+            data: { processed: processedLines, total: processedLines },
           },
         } as MessageEvent<MetaLinesStreamEvent>);
 
         return events;
       }),
-      mergeMap(events => from(events)),
+      mergeMap((events) => from(events)),
       toArray(),
       concatMap(async (allEvents) => {
         await this.cacheManager.set(cacheKey, allRows, 21600000);
 
         allEvents.push({
           type: 'message',
-          data: { 
-            type: 'complete', 
-            data: { cacheKey, total: allRows.length } 
+          data: {
+            type: 'complete',
+            data: { cacheKey, total: allRows.length },
           },
         } as MessageEvent<MetaLinesStreamEvent>);
 
         return allEvents;
       }),
-      mergeMap(events => from(events))
+      mergeMap((events) => from(events))
     );
   }
 
@@ -140,7 +154,7 @@ export class MetaController {
 
     for (const waba of wabas) {
       const lines = await this.metaService.listLines(waba.id);
-      
+
       for (const line of lines) {
         const details = await this.metaService.getPhoneNumberDetails(line.id);
 
@@ -195,7 +209,7 @@ export class MetaController {
       }
 
       if (/[",\n;]/.test(s)) {
-        return '"' + s.replace(/"/g, '""') + '"';
+        return '"' + s.split('"').join('""') + '"';
       }
       return s;
     };
@@ -207,7 +221,7 @@ export class MetaController {
       csvLines.push(
         [
           escapeCsv(r.id),
-          escapeCsv(r.line.replace(/\D/g, '')),
+          escapeCsv((r.line.match(/\d+/g) || []).join('')),
           escapeCsv(r.wabaId),
           escapeCsv(r.wabaName),
           escapeCsv(r.name),

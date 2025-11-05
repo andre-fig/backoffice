@@ -39,7 +39,13 @@ interface Sector {
 }
 
 type SortOrder = 'asc' | 'desc';
-type SortableColumn = 'status' | 'sectorName' | 'sourceUserName' | 'destinationUserName' | 'startDate' | 'endDate';
+type SortableColumn =
+  | 'status'
+  | 'sectorName'
+  | 'sourceUserName'
+  | 'destinationUserName'
+  | 'startDate'
+  | 'endDate';
 
 const ChatRedirectForm = () => {
   const toast = useToast();
@@ -47,15 +53,21 @@ const ChatRedirectForm = () => {
   const [loadingRedirects, setLoadingRedirects] = useState(false);
   const [sortBy, setSortBy] = useState<SortableColumn>('startDate');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
-  
+
   const [usersSaida, setUsersSaida] = useState<User[]>([]);
   const [usersDestino, setUsersDestino] = useState<User[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
-  
-  const [selectedSourceUser, setSelectedSourceUser] = useState<User | null>(null);
-  const [selectedDestinationUser, setSelectedDestinationUser] = useState<User | null>(null);
+
+  const [selectedSourceUser, setSelectedSourceUser] = useState<User | null>(
+    null
+  );
+  const [selectedDestinationUser, setSelectedDestinationUser] =
+    useState<User | null>(null);
   const [selectedSector, setSelectedSector] = useState<string>('');
-  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
+    null,
+    null,
+  ]);
 
   const [searchSaida, setSearchSaida] = useState<string>('');
   const [searchDestino, setSearchDestino] = useState<string>('');
@@ -92,25 +104,39 @@ const ChatRedirectForm = () => {
   };
 
   const sortedRedirects = useMemo(() => {
-    const statusOrder = { active: 0, scheduled: 1 };
+    const statusOrder: Record<string, number> = { active: 0, scheduled: 1 };
 
     return [...redirects].sort((a, b) => {
-      let aValue: string | number | Date | null = a[sortBy];
-      let bValue: string | number | Date | null = b[sortBy];
+      let aValue: string | number;
+      let bValue: string | number;
 
       if (sortBy === 'status') {
-        aValue = statusOrder[a.status as keyof typeof statusOrder] ?? 2;
-        bValue = statusOrder[b.status as keyof typeof statusOrder] ?? 2;
+        aValue = statusOrder[a.status] ?? 2;
+        bValue = statusOrder[b.status] ?? 2;
       } else if (sortBy === 'startDate' || sortBy === 'endDate') {
-        aValue = a[sortBy] ? new Date(a[sortBy] as Date).getTime() : 0;
-        bValue = b[sortBy] ? new Date(b[sortBy] as Date).getTime() : 0;
+        const aDate = (a as any)[sortBy] as Date | string | null | undefined;
+        const bDate = (b as any)[sortBy] as Date | string | null | undefined;
+        aValue = aDate ? new Date(aDate).getTime() : 0;
+        bValue = bDate ? new Date(bDate).getTime() : 0;
       } else if (sortBy === 'sourceUserName') {
         aValue = a.sourceUserName || a.sourceUserId || '';
         bValue = b.sourceUserName || b.sourceUserId || '';
+      } else if (sortBy === 'destinationUserName') {
+        aValue = a.destinationUserName || '';
+        bValue = b.destinationUserName || '';
+      } else if (sortBy === 'sectorName') {
+        aValue = a.sectorName || '';
+        bValue = b.sectorName || '';
+      } else {
+        // Fallback to string comparison
+        aValue = String((a as any)[sortBy] ?? '');
+        bValue = String((b as any)[sortBy] ?? '');
       }
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
-        const comparison = aValue.localeCompare(bValue, 'pt-BR', { numeric: true });
+        const comparison = aValue.localeCompare(bValue, 'pt-BR', {
+          numeric: true,
+        });
         return sortOrder === 'asc' ? comparison : -comparison;
       }
 
@@ -234,10 +260,15 @@ const ChatRedirectForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const [startDate, endDate] = dateRange;
-    
-    if (!selectedSourceUser || !selectedDestinationUser || !selectedSector || !startDate) {
+
+    if (
+      !selectedSourceUser ||
+      !selectedDestinationUser ||
+      !selectedSector ||
+      !startDate
+    ) {
       toast.error('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
@@ -271,7 +302,11 @@ const ChatRedirectForm = () => {
         fetchRedirects();
       } else {
         const error = await response.json();
-        toast.error(`Falha ao agendar o redirecionamento: ${error.message || 'Erro desconhecido'}`);
+        toast.error(
+          `Falha ao agendar o redirecionamento: ${
+            error.message || 'Erro desconhecido'
+          }`
+        );
       }
     } catch (error) {
       console.error('Erro ao enviar o formulário:', error);
@@ -286,9 +321,12 @@ const ChatRedirectForm = () => {
 
     try {
       const isScheduled = redirect.status === 'scheduled';
-      const response = await fetch(`/api/redirects/${redirect.id}?scheduled=${isScheduled}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/redirects/${redirect.id}?scheduled=${isScheduled}`,
+        {
+          method: 'DELETE',
+        }
+      );
 
       if (response.ok) {
         toast.success('Redirecionamento removido com sucesso!');
@@ -350,7 +388,9 @@ const ChatRedirectForm = () => {
                   <TableCell>
                     <TableSortLabel
                       active={sortBy === 'sourceUserName'}
-                      direction={sortBy === 'sourceUserName' ? sortOrder : 'asc'}
+                      direction={
+                        sortBy === 'sourceUserName' ? sortOrder : 'asc'
+                      }
                       onClick={() => handleSort('sourceUserName')}
                     >
                       Usuário de Origem
@@ -359,7 +399,9 @@ const ChatRedirectForm = () => {
                   <TableCell>
                     <TableSortLabel
                       active={sortBy === 'destinationUserName'}
-                      direction={sortBy === 'destinationUserName' ? sortOrder : 'asc'}
+                      direction={
+                        sortBy === 'destinationUserName' ? sortOrder : 'asc'
+                      }
                       onClick={() => handleSort('destinationUserName')}
                     >
                       Usuário de Destino
@@ -387,31 +429,40 @@ const ChatRedirectForm = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {loadingRedirects ? (
+                {loadingRedirects && (
                   <TableRow>
                     <TableCell colSpan={7} align="center">
                       Carregando...
                     </TableCell>
                   </TableRow>
-                ) : sortedRedirects.length === 0 ? (
+                )}
+                {!loadingRedirects && sortedRedirects.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} align="center">
                       Nenhum redirecionamento encontrado
                     </TableCell>
                   </TableRow>
-                ) : (
+                )}
+                {!loadingRedirects &&
+                  sortedRedirects.length > 0 &&
                   sortedRedirects.map((redirect) => (
                     <TableRow key={redirect.id}>
                       <TableCell>
                         <Chip
-                          label={redirect.status === 'active' ? 'Ativo' : 'Agendado'}
-                          color={redirect.status === 'active' ? 'success' : 'warning'}
+                          label={
+                            redirect.status === 'active' ? 'Ativo' : 'Agendado'
+                          }
+                          color={
+                            redirect.status === 'active' ? 'success' : 'warning'
+                          }
                           size="small"
                         />
                       </TableCell>
                       <TableCell>{redirect.sectorName}</TableCell>
                       <TableCell>
-                        {redirect.sourceUserName || redirect.sourceUserId || '-'}
+                        {redirect.sourceUserName ||
+                          redirect.sourceUserId ||
+                          '-'}
                       </TableCell>
                       <TableCell>{redirect.destinationUserName}</TableCell>
                       <TableCell>{formatDate(redirect.startDate)}</TableCell>
@@ -426,8 +477,7 @@ const ChatRedirectForm = () => {
                         </IconButton>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  ))}
               </TableBody>
             </Table>
           </TableContainer>
@@ -442,7 +492,14 @@ const ChatRedirectForm = () => {
           </Typography>
 
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 2 }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: 2,
+                mb: 2,
+              }}
+            >
               <FormControl fullWidth>
                 <Autocomplete
                   fullWidth
@@ -515,7 +572,6 @@ const ChatRedirectForm = () => {
                     textField: {
                       required: true,
                       fullWidth: true,
-                      placeholder: 'dd/mm/yyyy',
                     },
                   }}
                 />

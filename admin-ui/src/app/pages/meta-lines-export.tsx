@@ -14,11 +14,21 @@ import {
   Chip,
   TableSortLabel,
 } from '@mui/material';
-import { MetaLineRowDto, MetaLinesStreamEvent } from '@backoffice-monorepo/shared-types';
 import { useToast } from '../hooks/useToast';
+import {
+  MetaLineRowDto,
+  MetaLinesStreamEvent,
+} from '@backoffice-monorepo/shared-types';
 
 type SortOrder = 'asc' | 'desc';
-type SortableColumn = 'id' | 'line' | 'wabaName' | 'name' | 'active' | 'verified' | 'qualityRating';
+type SortableColumn =
+  | 'id'
+  | 'line'
+  | 'wabaName'
+  | 'name'
+  | 'active'
+  | 'verified'
+  | 'qualityRating';
 
 export default function MetaLinesExportPage() {
   const toast = useToast();
@@ -42,9 +52,11 @@ export default function MetaLinesExportPage() {
           setProgress(streamEvent.data);
         } else if (streamEvent.type === 'complete') {
           setCacheKey(streamEvent.data.cacheKey);
-          setProgress({ processed: streamEvent.data.total, total: streamEvent.data.total });
+          setProgress({
+            processed: streamEvent.data.total,
+            total: streamEvent.data.total,
+          });
           setIsStreaming(false);
-          setLoading(false);
           eventSource.close();
         }
       } catch (e) {
@@ -74,26 +86,51 @@ export default function MetaLinesExportPage() {
   };
 
   const sortedRows = useMemo(() => {
-    const qualityOrder = { GREEN: 3, YELLOW: 2, RED: 1, UNKNOWN: 0 };
-    const statusOrder = { CONNECTED: 1, DISCONNECTED: 0 };
+    const qualityOrder: Record<string, number> = {
+      GREEN: 3,
+      YELLOW: 2,
+      RED: 1,
+      UNKNOWN: 0,
+    };
+    const statusOrder: Record<string, number> = {
+      CONNECTED: 1,
+      DISCONNECTED: 0,
+    };
 
     return [...rows].sort((a, b) => {
-      let aValue: string | number = a[sortBy];
-      let bValue: string | number = b[sortBy];
+      let aValue: string | number;
+      let bValue: string | number;
 
-      if (sortBy === 'qualityRating') {
-        aValue = qualityOrder[a.qualityRating as keyof typeof qualityOrder] ?? 0;
-        bValue = qualityOrder[b.qualityRating as keyof typeof qualityOrder] ?? 0;
+      if (sortBy === 'id') {
+        aValue = a.id;
+        bValue = b.id;
+      } else if (sortBy === 'line') {
+        aValue = a.line;
+        bValue = b.line;
+      } else if (sortBy === 'wabaName') {
+        aValue = a.wabaName;
+        bValue = b.wabaName;
+      } else if (sortBy === 'name') {
+        aValue = a.name;
+        bValue = b.name;
       } else if (sortBy === 'active') {
-        aValue = statusOrder[a.active as keyof typeof statusOrder] ?? 0;
-        bValue = statusOrder[b.active as keyof typeof statusOrder] ?? 0;
+        aValue = statusOrder[a.active] ?? 0;
+        bValue = statusOrder[b.active] ?? 0;
       } else if (sortBy === 'verified') {
         aValue = a.verified === 'Sim' ? 1 : 0;
         bValue = b.verified === 'Sim' ? 1 : 0;
+      } else if (sortBy === 'qualityRating') {
+        aValue = qualityOrder[a.qualityRating] ?? 0;
+        bValue = qualityOrder[b.qualityRating] ?? 0;
+      } else {
+        aValue = 0;
+        bValue = 0;
       }
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
-        const comparison = aValue.localeCompare(bValue, 'pt-BR', { numeric: true });
+        const comparison = aValue.localeCompare(bValue, 'pt-BR', {
+          numeric: true,
+        });
         return sortOrder === 'asc' ? comparison : -comparison;
       }
 
@@ -111,7 +148,7 @@ export default function MetaLinesExportPage() {
 
     try {
       const res = await fetch(`/api/meta/export/lines?cacheKey=${cacheKey}`);
-      
+
       if (res.status === 410) {
         toast.error('Cache expirado. Por favor, recarregue os dados.');
         return;
@@ -122,12 +159,12 @@ export default function MetaLinesExportPage() {
       }
 
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      const url = globalThis.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'linhas-meta.csv';
       a.click();
-      window.URL.revokeObjectURL(url);
+      globalThis.URL.revokeObjectURL(url);
       toast.success('CSV exportado com sucesso!');
     } catch (e) {
       toast.error((e as Error).message);
@@ -148,10 +185,11 @@ export default function MetaLinesExportPage() {
           Linhas
         </Typography>
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          {isStreaming 
-            ? `Carregando... ${progress.processed} de ${progress.total || '?'} linha(s)`
-            : `${rows.length} linha(s) encontrada(s)`
-          }
+          {isStreaming
+            ? `Carregando... ${progress.processed} de ${
+                progress.total || '?'
+              } linha(s)`
+            : `${rows.length} linha(s) encontrada(s)`}
         </Typography>
 
         {isStreaming && <LinearProgress sx={{ mb: 2 }} />}
@@ -242,7 +280,9 @@ export default function MetaLinesExportPage() {
                     <TableCell>
                       <Chip
                         label={row.active}
-                        color={row.active === 'CONNECTED' ? 'success' : 'default'}
+                        color={
+                          row.active === 'CONNECTED' ? 'success' : 'default'
+                        }
                         size="small"
                       />
                     </TableCell>
@@ -254,19 +294,21 @@ export default function MetaLinesExportPage() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={row.qualityRating}
-                        color={
-                          row.qualityRating === 'GREEN'
-                            ? 'success'
-                            : row.qualityRating === 'YELLOW'
-                            ? 'warning'
-                            : row.qualityRating === 'RED'
-                            ? 'error'
-                            : 'default'
-                        }
-                        size="small"
-                      />
+                      {(() => {
+                        let color: 'default' | 'success' | 'warning' | 'error' =
+                          'default';
+                        if (row.qualityRating === 'GREEN') color = 'success';
+                        else if (row.qualityRating === 'YELLOW')
+                          color = 'warning';
+                        else if (row.qualityRating === 'RED') color = 'error';
+                        return (
+                          <Chip
+                            label={row.qualityRating}
+                            color={color}
+                            size="small"
+                          />
+                        );
+                      })()}
                     </TableCell>
                   </TableRow>
                 ))

@@ -43,12 +43,16 @@ export interface PhoneNumberDetails {
   quality_rating?: string;
 }
 
+// Reusable type alias for Graph API query parameters
+type QueryParams = Record<string, string | number | undefined>;
+
 @Injectable()
 export class MetaService {
   private readonly logger = new Logger(MetaService.name);
   private readonly baseURL: string;
   private readonly accessToken: string;
   private readonly businessId: string;
+  private readonly allowedWabaIds: Set<string>;
 
   constructor(
     private readonly http: HttpService,
@@ -58,12 +62,14 @@ export class MetaService {
     this.baseURL = `https://graph.facebook.com/${version}`;
     this.accessToken = this.config.get<string>('META_ACCESS_TOKEN') ?? '';
     this.businessId = this.config.get<string>('META_BUSINESS_ID') ?? '';
+    const allowed = (this.config.get<string>('META_ALLOWED_WABA_IDS') ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    this.allowedWabaIds = new Set<string>(allowed);
   }
 
-  private async request<R>(
-    url: string,
-    params: Record<string, string | number | undefined> = {}
-  ): Promise<R> {
+  private async request<R>(url: string, params: QueryParams = {}): Promise<R> {
     if (!this.accessToken) {
       this.logger.error('META_ACCESS_TOKEN não configurado');
       throw new InternalServerErrorException(
@@ -92,13 +98,13 @@ export class MetaService {
 
   private async requestAllPages<T>(
     path: string,
-    params: Record<string, string | number | undefined> = {}
+    params: QueryParams = {}
   ): Promise<T[]> {
     const allItems: T[] = [];
     let afterCursor: string | undefined = undefined;
 
     do {
-      const queryParams: Record<string, string | number | undefined> = {
+      const queryParams: QueryParams = {
         ...params,
         limit: params.limit || 100,
       };
@@ -123,13 +129,14 @@ export class MetaService {
   }
 
   async listWabas(): Promise<Waba[]> {
-    // TODO: FILTRAR PELOS NOSSOS WABAS
-    return this.requestAllPages<Waba>(
+    const wabas = await this.requestAllPages<Waba>(
       `/${this.businessId}/owned_whatsapp_business_accounts`,
       {
         fields: 'id,name',
       }
     );
+    if (this.allowedWabaIds.size === 0) return wabas;
+    return wabas.filter((w) => this.allowedWabaIds.has(w.id));
   }
 
   async listLines(wabaId: string): Promise<PhoneNumber[]> {

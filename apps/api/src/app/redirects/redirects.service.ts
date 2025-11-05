@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ArrayContains, Repository, LessThanOrEqual } from 'typeorm';
 import { Datasources } from '../../common/datasources.enum';
@@ -6,12 +11,15 @@ import { ChatEntity } from '../../database/db-appchat/entities/chat.entity';
 import { ContactEntity } from '../../database/db-appchat/entities/contact.entity';
 import { AccountEntity } from '../../database/db-appchat/entities/account.entity';
 import { ChatTagEntity } from '../../database/db-appchat/entities/chat-tag.entity';
-import { ScheduledRedirectEntity, RedirectStatus } from '../../database/db-backoffice/entities/scheduled-redirect.entity';
-import { 
-  RedirectChatsDto, 
-  CreateScheduledRedirectDto, 
+import {
+  ScheduledRedirectEntity,
+  RedirectStatus,
+} from '../../database/db-backoffice/entities/scheduled-redirect.entity';
+import {
+  RedirectChatsDto,
+  CreateScheduledRedirectDto,
   UpdateRedirectEndDateDto,
-  RedirectListResponseDto 
+  RedirectListResponseDto,
 } from '@backoffice-monorepo/shared-types';
 import { VdiService } from '../vdi/vdi.service';
 import { VdiUserResponseDto } from '../vdi/dto/vdi-user-response.dto';
@@ -103,28 +111,39 @@ export class RedirectsService {
   async createScheduledRedirect(
     dto: CreateScheduledRedirectDto
   ): Promise<ScheduledRedirectEntity> {
-    const { sourceUserId, destinationUserId, sectorCode, startDate, endDate } = dto;
+    const { sourceUserId, destinationUserId, sectorCode, startDate, endDate } =
+      dto;
 
     const sourceUser = await this.vdiService.getUserById(sourceUserId);
     if (!sourceUser) {
-      throw new NotFoundException(`Usuário de origem ${sourceUserId} não encontrado.`);
+      throw new NotFoundException(
+        `Usuário de origem ${sourceUserId} não encontrado.`
+      );
     }
 
-    const destinationUser = await this.vdiService.getUserById(destinationUserId);
+    const destinationUser = await this.vdiService.getUserById(
+      destinationUserId
+    );
     if (!destinationUser) {
-      throw new NotFoundException(`Usuário de destino ${destinationUserId} não encontrado.`);
+      throw new NotFoundException(
+        `Usuário de destino ${destinationUserId} não encontrado.`
+      );
     }
 
     const start = new Date(startDate);
     const end = endDate ? new Date(endDate) : null;
 
     if (end && end <= start) {
-      throw new BadRequestException('A data de fim deve ser maior que a data de início.');
+      throw new BadRequestException(
+        'A data de fim deve ser maior que a data de início.'
+      );
     }
 
     const now = new Date();
     if (start < now) {
-      throw new BadRequestException('A data de início não pode ser no passado.');
+      throw new BadRequestException(
+        'A data de início não pode ser no passado.'
+      );
     }
 
     const scheduledRedirect = this.scheduledRedirectRepository.create({
@@ -139,31 +158,37 @@ export class RedirectsService {
     return await this.scheduledRedirectRepository.save(scheduledRedirect);
   }
 
-  async removeRedirect(redirectId: string, isScheduled: boolean): Promise<{ message: string }> {
-    if (isScheduled) {
-      const scheduledRedirect = await this.scheduledRedirectRepository.findOne({
-        where: { id: redirectId },
-      });
+  async cancelScheduledRedirect(
+    redirectId: string
+  ): Promise<{ message: string }> {
+    const scheduledRedirect = await this.scheduledRedirectRepository.findOne({
+      where: { id: redirectId },
+    });
 
-      if (!scheduledRedirect) {
-        throw new NotFoundException(`Redirecionamento agendado ${redirectId} não encontrado.`);
-      }
-
-      scheduledRedirect.status = RedirectStatus.CANCELLED;
-      await this.scheduledRedirectRepository.save(scheduledRedirect);
-
-      return { message: 'Redirecionamento agendado cancelado com sucesso.' };
-    } else {
-      const parts = redirectId.split(':');
-      if (parts.length !== 2) {
-        throw new BadRequestException('ID de redirecionamento ativo inválido.');
-      }
-
-      const [sectorCode, destinationUserId] = parts;
-      await this.removeActiveRedirect(sectorCode, destinationUserId);
-
-      return { message: 'Redirecionamento ativo removido com sucesso.' };
+    if (!scheduledRedirect) {
+      throw new NotFoundException(
+        `Redirecionamento agendado ${redirectId} não encontrado.`
+      );
     }
+
+    scheduledRedirect.status = RedirectStatus.CANCELLED;
+    await this.scheduledRedirectRepository.save(scheduledRedirect);
+
+    return { message: 'Redirecionamento agendado cancelado com sucesso.' };
+  }
+
+  async removeActiveRedirectByCompositeId(
+    redirectId: string
+  ): Promise<{ message: string }> {
+    const parts = redirectId.split(':');
+    if (parts.length !== 2) {
+      throw new BadRequestException('ID de redirecionamento ativo inválido.');
+    }
+
+    const [sectorCode, destinationUserId] = parts;
+    await this.removeActiveRedirect(sectorCode, destinationUserId);
+
+    return { message: 'Redirecionamento ativo removido com sucesso.' };
   }
 
   async updateRedirectEndDate(
@@ -175,13 +200,17 @@ export class RedirectsService {
     });
 
     if (!scheduledRedirect) {
-      throw new NotFoundException(`Redirecionamento agendado ${redirectId} não encontrado.`);
+      throw new NotFoundException(
+        `Redirecionamento agendado ${redirectId} não encontrado.`
+      );
     }
 
     const newEndDate = new Date(dto.endDate);
 
     if (newEndDate <= scheduledRedirect.startDate) {
-      throw new BadRequestException('A data de fim deve ser maior que a data de início.');
+      throw new BadRequestException(
+        'A data de fim deve ser maior que a data de início.'
+      );
     }
 
     scheduledRedirect.endDate = newEndDate;
@@ -205,7 +234,10 @@ export class RedirectsService {
         await this.scheduledRedirectRepository.save(redirect);
         this.logger.log(`Redirecionamento ${redirect.id} ativado com sucesso.`);
       } catch (error) {
-        this.logger.error(`Erro ao ativar redirecionamento ${redirect.id}:`, error);
+        this.logger.error(
+          `Erro ao ativar redirecionamento ${redirect.id}:`,
+          error
+        );
       }
     }
 
@@ -221,22 +253,29 @@ export class RedirectsService {
           await this.deactivateRedirect(redirect);
           redirect.status = RedirectStatus.COMPLETED;
           await this.scheduledRedirectRepository.save(redirect);
-          this.logger.log(`Redirecionamento ${redirect.id} finalizado com sucesso.`);
+          this.logger.log(
+            `Redirecionamento ${redirect.id} finalizado com sucesso.`
+          );
         } catch (error) {
-          this.logger.error(`Erro ao finalizar redirecionamento ${redirect.id}:`, error);
+          this.logger.error(
+            `Erro ao finalizar redirecionamento ${redirect.id}:`,
+            error
+          );
         }
       }
     }
   }
 
-  async getUserSectors(userId: string): Promise<{ code: string; name: string }[]> {
+  async getUserSectors(
+    userId: string
+  ): Promise<{ code: string; name: string }[]> {
     const user = await this.vdiService.getUserById(userId);
-    
+
     if (!user?.structs?.sectors) {
       return [];
     }
 
-    return user.structs.sectors.map(sector => ({
+    return user.structs.sectors.map((sector) => ({
       code: sector.code,
       name: sector.name,
     }));
@@ -254,8 +293,10 @@ export class RedirectsService {
       const overrides = account.pool.config.overrides;
       for (const [sectorCode, destinationUserId] of Object.entries(overrides)) {
         try {
-          const destinationUser = await this.vdiService.getUserById(destinationUserId);
-          
+          const destinationUser = await this.vdiService.getUserById(
+            destinationUserId
+          );
+
           activeRedirects.push({
             id: `${sectorCode}:${destinationUserId}`,
             status: 'active',
@@ -269,7 +310,10 @@ export class RedirectsService {
             endDate: null,
           });
         } catch (error) {
-          this.logger.warn(`Erro ao buscar usuário ${destinationUserId}:`, error);
+          this.logger.warn(
+            `Erro ao buscar usuário ${destinationUserId}:`,
+            error
+          );
         }
       }
     }
@@ -289,8 +333,12 @@ export class RedirectsService {
 
     for (const redirect of scheduledRedirects) {
       try {
-        const sourceUser = await this.vdiService.getUserById(redirect.sourceUserId);
-        const destinationUser = await this.vdiService.getUserById(redirect.destinationUserId);
+        const sourceUser = await this.vdiService.getUserById(
+          redirect.sourceUserId
+        );
+        const destinationUser = await this.vdiService.getUserById(
+          redirect.destinationUserId
+        );
 
         redirectList.push({
           id: redirect.id,
@@ -300,23 +348,32 @@ export class RedirectsService {
           sourceUserId: redirect.sourceUserId,
           sourceUserName: sourceUser?.name || redirect.sourceUserId,
           destinationUserId: redirect.destinationUserId,
-          destinationUserName: destinationUser?.name || redirect.destinationUserId,
+          destinationUserName:
+            destinationUser?.name || redirect.destinationUserId,
           startDate: redirect.startDate,
           endDate: redirect.endDate,
         });
       } catch (error) {
-        this.logger.warn(`Erro ao buscar dados do redirecionamento ${redirect.id}:`, error);
+        this.logger.warn(
+          `Erro ao buscar dados do redirecionamento ${redirect.id}:`,
+          error
+        );
       }
     }
 
     return redirectList;
   }
 
-  private async removeActiveRedirect(sectorCode: string, destinationUserId: string): Promise<void> {
+  private async removeActiveRedirect(
+    sectorCode: string,
+    destinationUserId: string
+  ): Promise<void> {
     const sourceUser = await this.findUserBySectorCode(sectorCode);
-    
+
     if (!sourceUser) {
-      throw new NotFoundException(`Usuário com setor ${sectorCode} não encontrado.`);
+      throw new NotFoundException(
+        `Usuário com setor ${sectorCode} não encontrado.`
+      );
     }
 
     const groupId = sourceUser.groups[0]?.id;
@@ -331,40 +388,48 @@ export class RedirectsService {
     });
 
     if (!account?.pool?.config?.overrides) {
-      throw new NotFoundException(`Conta não encontrada para o grupo ${groupId}.`);
+      throw new NotFoundException(
+        `Conta não encontrada para o grupo ${groupId}.`
+      );
     }
 
     if (account.pool.config.overrides[sectorCode] === destinationUserId) {
       delete account.pool.config.overrides[sectorCode];
       await this.accountEntityRepository.save(account);
 
+      // TODO: ESSA SUBQUERY É DESNECESSÁRIA. REMOVER ELA. Basta atualizar os chats do usuário de destino e setorCode para o sourceUser.
+      const contactIdsSubQuery = this.contactEntityRepository
+        .createQueryBuilder('contact')
+        .select('contact.id')
+        .where('contact.cs = :sectorCode');
+
       await this.chatEntityRepository
         .createQueryBuilder('chat')
         .update(ChatEntity)
         .set({ userId: sourceUser.id })
         .where('chat.userId = :destinationUserId', { destinationUserId })
-        .andWhere((qb) => {
-          const subQuery = qb
-            .subQuery()
-            .select('contact.id')
-            .from(ContactEntity, 'contact')
-            .where('contact.cs = :sectorCode')
-            .getQuery();
-          return `chat.contactId IN ${subQuery}`;
-        })
+        .andWhere(`chat.contactId IN (${contactIdsSubQuery.getQuery()})`)
         .setParameter('sectorCode', sectorCode)
         .execute();
     } else {
-      throw new NotFoundException(`Redirecionamento ativo não encontrado para o setor ${sectorCode}.`);
+      throw new NotFoundException(
+        `Redirecionamento ativo não encontrado para o setor ${sectorCode}.`
+      );
     }
   }
 
-  private async activateScheduledRedirect(redirect: ScheduledRedirectEntity): Promise<void> {
+  private async activateScheduledRedirect(
+    redirect: ScheduledRedirectEntity
+  ): Promise<void> {
     const sourceUser = await this.vdiService.getUserById(redirect.sourceUserId);
-    const destinationUser = await this.vdiService.getUserById(redirect.destinationUserId);
+    const destinationUser = await this.vdiService.getUserById(
+      redirect.destinationUserId
+    );
 
     if (!sourceUser || !destinationUser) {
-      throw new NotFoundException('Usuário de origem ou destino não encontrado.');
+      throw new NotFoundException(
+        'Usuário de origem ou destino não encontrado.'
+      );
     }
 
     const groupId = sourceUser.groups[0]?.id;
@@ -379,7 +444,9 @@ export class RedirectsService {
     });
 
     if (!account?.pool?.config) {
-      throw new NotFoundException(`Conta não encontrada para o grupo ${groupId}.`);
+      throw new NotFoundException(
+        `Conta não encontrada para o grupo ${groupId}.`
+      );
     }
 
     account.pool.config.overrides[redirect.sectorCode] = destinationUser.id;
@@ -395,11 +462,15 @@ export class RedirectsService {
     );
   }
 
-  private async deactivateRedirect(redirect: ScheduledRedirectEntity): Promise<void> {
+  private async deactivateRedirect(
+    redirect: ScheduledRedirectEntity
+  ): Promise<void> {
     const sourceUser = await this.vdiService.getUserById(redirect.sourceUserId);
-    
+
     if (!sourceUser) {
-      throw new NotFoundException(`Usuário de origem ${redirect.sourceUserId} não encontrado.`);
+      throw new NotFoundException(
+        `Usuário de origem ${redirect.sourceUserId} não encontrado.`
+      );
     }
 
     const groupId = sourceUser.groups[0]?.id;
@@ -414,7 +485,9 @@ export class RedirectsService {
     });
 
     if (!account?.pool?.config?.overrides) {
-      throw new NotFoundException(`Conta não encontrada para o grupo ${groupId}.`);
+      throw new NotFoundException(
+        `Conta não encontrada para o grupo ${groupId}.`
+      );
     }
 
     if (account.pool.config.overrides[redirect.sectorCode]) {
@@ -422,30 +495,33 @@ export class RedirectsService {
       await this.accountEntityRepository.save(account);
     }
 
+    const contactIdsSubQuery = this.contactEntityRepository
+      .createQueryBuilder('contact')
+      .select('contact.id')
+      .where('contact.cs = :sectorCode');
+
     await this.chatEntityRepository
       .createQueryBuilder('chat')
       .update(ChatEntity)
       .set({ userId: sourceUser.id })
-      .where('chat.userId = :destinationUserId', { destinationUserId: redirect.destinationUserId })
-      .andWhere((qb) => {
-        const subQuery = qb
-          .subQuery()
-          .select('contact.id')
-          .from(ContactEntity, 'contact')
-          .where('contact.cs = :sectorCode')
-          .getQuery();
-        return `chat.contactId IN ${subQuery}`;
+      .where('chat.userId = :destinationUserId', {
+        destinationUserId: redirect.destinationUserId,
       })
+      .andWhere(`chat.contactId IN (${contactIdsSubQuery.getQuery()})`)
       .setParameter('sectorCode', redirect.sectorCode)
       .execute();
   }
 
-  private async findUserBySectorCode(sectorCode: string): Promise<VdiUserResponseDto | null> {
+  private async findUserBySectorCode(
+    sectorCode: string
+  ): Promise<VdiUserResponseDto | null> {
     const users = await this.vdiService.getUsers({ perPage: 100 });
-    
+
     for (const userData of users.data) {
       const user = await this.vdiService.getUserById(userData.id);
-      if (user?.structs?.sectors?.some(sector => sector.code === sectorCode)) {
+      if (
+        user?.structs?.sectors?.some((sector) => sector.code === sectorCode)
+      ) {
         return user;
       }
     }

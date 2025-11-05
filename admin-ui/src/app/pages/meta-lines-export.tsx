@@ -66,7 +66,7 @@ export default function MetaLinesExportPage() {
 
     eventSource.onerror = (e) => {
       console.error('SSE error:', e);
-      toast.error('Erro ao carregar dados');
+      toast.error('Erro ao carregar dados.');
       setIsStreaming(false);
       eventSource.close();
     };

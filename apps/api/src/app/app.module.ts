@@ -37,50 +37,68 @@ import { ImWabasModule } from './im-wabas/im-wabas.module';
     TypeOrmModule.forRootAsync({
       name: Datasources.DB_APPCHAT,
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('DB_APPCHAT_HOST'),
-        port: +configService.get<number>('DB_APPCHAT_PORT'),
-        username: configService.get<string>('DB_APPCHAT_USERNAME'),
-        password: configService.get<string>('DB_APPCHAT_PASSWORD'),
-        database: configService.get<string>('DB_APPCHAT_DATABASE'),
-        entities: [
-          AccountEntity,
-          ChatTagEntity,
-          ChatEntity,
-          SenderEntity,
-          TagEntity,
-        ],
-        synchronize: false,
-        ssl: true,
-        extra: {
-          ssl: {
-            rejectUnauthorized: false,
-          },
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const useSsl =
+          (configService.get<string>('DB_APPCHAT_SSL') ?? 'true')
+            .toString()
+            .toLowerCase() !== 'false';
+
+        return {
+          type: 'postgres',
+          host: configService.get<string>('DB_APPCHAT_HOST'),
+          port: +configService.get<number>('DB_APPCHAT_PORT'),
+          username: configService.get<string>('DB_APPCHAT_USERNAME'),
+          password: configService.get<string>('DB_APPCHAT_PASSWORD'),
+          database: configService.get<string>('DB_APPCHAT_DATABASE'),
+          entities: [
+            AccountEntity,
+            ChatTagEntity,
+            ChatEntity,
+            SenderEntity,
+            TagEntity,
+          ],
+          synchronize: false,
+          ssl: useSsl,
+          ...(useSsl && {
+            extra: {
+              ssl: {
+                rejectUnauthorized: false,
+              },
+            },
+          }),
+        };
+      },
       inject: [ConfigService],
     }),
 
     TypeOrmModule.forRootAsync({
       name: Datasources.DB_BACKOFFICE,
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('DB_BACKOFFICE_HOST'),
-        port: +configService.get<number>('DB_BACKOFFICE_PORT'),
-        username: configService.get<string>('DB_BACKOFFICE_USERNAME'),
-        password: configService.get<string>('DB_BACKOFFICE_PASSWORD'),
-        database: configService.get<string>('DB_BACKOFFICE_DATABASE'),
-        entities: [ScheduledRedirectEntity, ImWabaEntity],
-        synchronize: true,
-        ssl: true,
-        extra: {
-          ssl: {
-            rejectUnauthorized: false,
-          },
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const useSsl =
+          (configService.get<string>('DB_BACKOFFICE_SSL') ?? 'true')
+            .toString()
+            .toLowerCase() !== 'false';
+
+        return {
+          type: 'postgres',
+          host: configService.get<string>('DB_BACKOFFICE_HOST'),
+          port: +configService.get<number>('DB_BACKOFFICE_PORT'),
+          username: configService.get<string>('DB_BACKOFFICE_USERNAME'),
+          password: configService.get<string>('DB_BACKOFFICE_PASSWORD'),
+          database: configService.get<string>('DB_BACKOFFICE_DATABASE'),
+          entities: [ScheduledRedirectEntity, ImWabaEntity],
+          synchronize: true,
+          ssl: useSsl,
+          ...(useSsl && {
+            extra: {
+              ssl: {
+                rejectUnauthorized: false,
+              },
+            },
+          }),
+        };
+      },
       inject: [ConfigService],
     }),
 

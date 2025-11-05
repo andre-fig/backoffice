@@ -1,15 +1,24 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-import { Observable, from, concatMap, mergeMap } from 'rxjs';
+import {
+  Observable,
+  from,
+  of,
+  defer,
+  concatWith,
+  concatMap,
+  mergeMap,
+  tap,
+} from 'rxjs';
 import { MetaService } from '../meta.service';
 import { ImWabasService } from '../../im-wabas/im-wabas.service';
-import { 
-  MetaLineRowDto, 
-  MetaLinesStreamEvent, 
+import {
+  MetaLineRowDto,
+  MetaLinesStreamEvent,
   MetaLinesEventType,
   LineQualityRating,
-  LineConnectionStatus
+  LineConnectionStatus,
 } from '@backoffice-monorepo/shared-types';
 
 @Injectable()
@@ -23,7 +32,9 @@ export class MetaLinesService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
 
-  streamAllLines(cacheKey: string): Observable<MessageEvent<MetaLinesStreamEvent>> {
+  streamAllLines(
+    cacheKey: string
+  ): Observable<MessageEvent<MetaLinesStreamEvent>> {
     const allRows: MetaLineRowDto[] = [];
 
     return from(this.getFilteredWabas()).pipe(
@@ -36,18 +47,27 @@ export class MetaLinesService {
             const lineRows: MetaLineRowDto[] = [];
 
             for (const line of lines) {
-              const details = await this.metaService.getPhoneNumberDetails(line.id);
+              const details = await this.metaService.getPhoneNumberDetails(
+                line.id
+              );
 
               const statusString = (line.status ?? '').toUpperCase();
-              const qualityString = details.quality_rating ?? line.quality_rating ?? '';
-              
+              const qualityString =
+                (details.quality_rating || line.quality_rating || '').trim();
+
               const row: MetaLineRowDto = {
                 id: line.id,
-                line: details.display_phone_number ?? line.display_phone_number ?? '',
+                line:
+                  details.display_phone_number ??
+                  line.display_phone_number ??
+                  '',
                 wabaId: waba.id,
                 wabaName: waba.name ?? '',
                 name: details.verified_name ?? line.verified_name ?? '',
-                active: statusString === 'CONNECTED' ? LineConnectionStatus.CONNECTED : LineConnectionStatus.DISCONNECTED,
+                active:
+                  statusString === 'CONNECTED'
+                    ? LineConnectionStatus.CONNECTED
+                    : LineConnectionStatus.DISCONNECTED,
                 verified: details.is_official_business_account ? 'Sim' : 'Não',
                 qualityRating: this.normalizeQualityRating(qualityString),
               };
@@ -82,20 +102,22 @@ export class MetaLinesService {
         return events;
       }),
       mergeMap((events) => from(events)),
-      concatMap(async (allEvents) => {
-        await this.cacheManager.set(cacheKey, allRows, this.cacheTtl);
-
-        const completeEvent: MessageEvent<MetaLinesStreamEvent> = {
-          type: 'message',
-          data: {
-            type: MetaLinesEventType.COMPLETE,
-            data: { cacheKey, total: allRows.length },
-          },
-        } as MessageEvent<MetaLinesStreamEvent>;
-
-        return [...allEvents, completeEvent];
+      tap({
+        complete: () => {
+          this.cacheManager.set(cacheKey, allRows, this.cacheTtl);
+        },
       }),
-      mergeMap((events) => from(events))
+      concatWith(
+        defer(() =>
+          of({
+            type: 'message',
+            data: {
+              type: MetaLinesEventType.COMPLETE,
+              data: { cacheKey, total: allRows.length },
+            },
+          } as MessageEvent<MetaLinesStreamEvent>)
+        )
+      )
     );
   }
 
@@ -109,7 +131,8 @@ export class MetaLinesService {
       for (const line of lines) {
         const details = await this.metaService.getPhoneNumberDetails(line.id);
         const statusString = (line.status ?? '').toUpperCase();
-        const qualityString = details.quality_rating ?? line.quality_rating ?? '';
+        const qualityString =
+          (details.quality_rating || line.quality_rating || '').trim();
 
         rows.push({
           id: line.id,
@@ -117,7 +140,10 @@ export class MetaLinesService {
           wabaId: waba.id,
           wabaName: waba.name ?? '',
           name: details.verified_name ?? line.verified_name ?? '',
-          active: statusString === 'CONNECTED' ? LineConnectionStatus.CONNECTED : LineConnectionStatus.DISCONNECTED,
+          active:
+            statusString === 'CONNECTED'
+              ? LineConnectionStatus.CONNECTED
+              : LineConnectionStatus.DISCONNECTED,
           verified: details.is_official_business_account ? 'Sim' : 'Não',
           qualityRating: this.normalizeQualityRating(qualityString),
         });
@@ -143,12 +169,12 @@ export class MetaLinesService {
   }
 
   private normalizeQualityRating(rating: string): LineQualityRating {
-    const upperRating = rating.toUpperCase();
-    
-    if (upperRating === 'GREEN') return LineQualityRating.GREEN;
-    if (upperRating === 'YELLOW') return LineQualityRating.YELLOW;
-    if (upperRating === 'RED') return LineQualityRating.RED;
-    
+    const upperRating = (rating ?? '').toString().trim().toUpperCase();
+
+    if (upperRating === 'HIGH') return LineQualityRating.HIGH;
+    if (upperRating === 'MEDIUM') return LineQualityRating.MEDIUM;
+    if (upperRating === 'LOW') return LineQualityRating.LOW;
+
     return LineQualityRating.UNKNOWN;
   }
 }

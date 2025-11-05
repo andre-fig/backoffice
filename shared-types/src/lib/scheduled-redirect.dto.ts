@@ -1,3 +1,5 @@
+import { RedirectStatus } from './enums';
+
 export interface CreateScheduledRedirectDto {
   sourceUserId: string;
   destinationUserId: string;
@@ -17,7 +19,7 @@ export interface ScheduledRedirectResponseDto {
   sectorCode: string;
   startDate: Date;
   endDate: Date | null;
-  status: 'scheduled' | 'active' | 'completed' | 'cancelled';
+  status: RedirectStatus;
   createdAt: Date;
 }
 
@@ -25,12 +27,12 @@ export interface ActiveRedirectResponseDto {
   sectorCode: string;
   sourceUserId: string;
   destinationUserId: string;
-  status: 'active';
+  status: RedirectStatus.ACTIVE;
 }
 
 export interface RedirectListResponseDto {
   id: string;
-  status: 'active' | 'scheduled';
+  status: RedirectStatus.ACTIVE | RedirectStatus.SCHEDULED;
   sectorCode: string;
   sectorName: string;
   sourceUserId: string;

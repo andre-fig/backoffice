@@ -299,7 +299,7 @@ export class RedirectsService {
 
           activeRedirects.push({
             id: `${sectorCode}:${destinationUserId}`,
-            status: 'active',
+            status: RedirectStatus.ACTIVE,
             sectorCode,
             sectorName: sectorCode,
             sourceUserId: '',
@@ -342,7 +342,7 @@ export class RedirectsService {
 
         redirectList.push({
           id: redirect.id,
-          status: 'scheduled',
+          status: RedirectStatus.SCHEDULED,
           sectorCode: redirect.sectorCode,
           sectorName: redirect.sectorCode,
           sourceUserId: redirect.sourceUserId,

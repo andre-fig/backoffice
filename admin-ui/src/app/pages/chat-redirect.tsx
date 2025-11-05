@@ -25,7 +25,7 @@ import { DateRangePicker } from '@mui/x-date-pickers-pro/DateRangePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ptBR } from 'date-fns/locale';
-import { RedirectListResponseDto } from '@backoffice-monorepo/shared-types';
+import { RedirectListResponseDto, RedirectStatus } from '@backoffice-monorepo/shared-types';
 import { useToast } from '../hooks/useToast';
 
 interface User {
@@ -107,7 +107,10 @@ const ChatRedirectForm = () => {
   };
 
   const sortedRedirects = useMemo(() => {
-    const statusOrder: Record<string, number> = { active: 0, scheduled: 1 };
+    const statusOrder = { 
+      [RedirectStatus.ACTIVE]: 0, 
+      [RedirectStatus.SCHEDULED]: 1 
+    };
 
     return [...redirects].sort((a, b) => {
       let aValue: string | number;
@@ -323,7 +326,7 @@ const ChatRedirectForm = () => {
     }
 
     try {
-      const isScheduled = redirect.status === 'scheduled';
+      const isScheduled = redirect.status === RedirectStatus.SCHEDULED;
       const response = await fetch(
         `/api/redirects/${redirect.id}?scheduled=${isScheduled}`,
         {
@@ -453,10 +456,10 @@ const ChatRedirectForm = () => {
                       <TableCell>
                         <Chip
                           label={
-                            redirect.status === 'active' ? 'Ativo' : 'Agendado'
+                            redirect.status === RedirectStatus.ACTIVE ? 'Ativo' : 'Agendado'
                           }
                           color={
-                            redirect.status === 'active' ? 'success' : 'warning'
+                            redirect.status === RedirectStatus.ACTIVE ? 'success' : 'warning'
                           }
                           size="small"
                         />

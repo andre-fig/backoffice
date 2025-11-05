@@ -12,7 +12,6 @@ import { TagEntity } from '../database/db-appchat/entities/tag.entity';
 import { ChatTagEntity } from '../database/db-appchat/entities/chat-tag.entity';
 import { Datasources } from '../common/datasources.enum';
 import { VdiModule } from './vdi/vdi.module';
-import { InstantMessengerModule } from './instant-messenger/instant-messenger.module';
 import { AuthModule } from './auth/auth.module';
 import { MetaModule } from './meta/meta.module';
 

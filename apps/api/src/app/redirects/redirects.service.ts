@@ -7,7 +7,6 @@ import { AccountEntity } from '../../database/db-appchat/entities/account.entity
 import { ChatTagEntity } from '../../database/db-appchat/entities/chat-tag.entity';
 import { RedirectChatsDto } from '@backoffice-monorepo/shared-types';
 import { VdiService } from '../vdi/vdi.service';
-import { InstantMessengerService } from '../instant-messenger/instant-messenger.service';
 import { VdiUserResponseDto } from '../vdi/dto/vdi-user-response.dto';
 
 @Injectable()
@@ -24,8 +23,7 @@ export class RedirectsService {
     @InjectRepository(ChatTagEntity, Datasources.DB_APPCHAT)
     private readonly chatTagEntityRepository: Repository<ChatTagEntity>,
 
-    private readonly vdiService: VdiService,
-    private readonly instantMessengerService: InstantMessengerService
+    private readonly vdiService: VdiService
   ) {}
 
   async redirectUserChats(redirectChatsDto: RedirectChatsDto): Promise<{
@@ -122,15 +120,6 @@ export class RedirectsService {
     if (!account?.pool?.config) {
       throw new NotFoundException(
         `Conta não encontrada com o grupo ${groupId}.`
-      );
-    }
-
-    const userApplications =
-      await this.instantMessengerService.getUserApplications(sourceUser.email);
-
-    if (userApplications[0].id !== account.appId) {
-      throw new NotFoundException(
-        `Aplicação do usuário ${sourceUser.id}, com conta com appId ${account.appId} não compatível com a aplicação ${userApplications[0].id} do Instant Messenger.`
       );
     }
 

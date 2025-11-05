@@ -3,6 +3,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Observable, from, concatMap, mergeMap } from 'rxjs';
 import { MetaService } from '../meta.service';
+import { ImWabasService } from '../../im-wabas/im-wabas.service';
 import { 
   MetaLineRowDto, 
   MetaLinesStreamEvent, 
@@ -18,13 +19,14 @@ export class MetaLinesService {
 
   constructor(
     private readonly metaService: MetaService,
+    private readonly imWabasService: ImWabasService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
 
   streamAllLines(cacheKey: string): Observable<MessageEvent<MetaLinesStreamEvent>> {
     const allRows: MetaLineRowDto[] = [];
 
-    return from(this.metaService.listWabas()).pipe(
+    return from(this.getFilteredWabas()).pipe(
       concatMap((wabas) => {
         let processedLines = 0;
 
@@ -98,7 +100,7 @@ export class MetaLinesService {
   }
 
   async buildAllRows(): Promise<MetaLineRowDto[]> {
-    const wabas = await this.metaService.listWabas();
+    const wabas = await this.getFilteredWabas();
     const rows: MetaLineRowDto[] = [];
 
     for (const waba of wabas) {
@@ -127,6 +129,17 @@ export class MetaLinesService {
 
   async getCachedRows(cacheKey: string): Promise<MetaLineRowDto[] | undefined> {
     return this.cacheManager.get<MetaLineRowDto[]>(cacheKey);
+  }
+
+  private async getFilteredWabas() {
+    const allWabas = await this.metaService.listWabas();
+    const storedWabaIds = await this.imWabasService.getAllWabaIds();
+    
+    if (storedWabaIds.length === 0) {
+      return [];
+    }
+    
+    return allWabas.filter((waba) => storedWabaIds.includes(waba.id));
   }
 
   private normalizeQualityRating(rating: string): LineQualityRating {

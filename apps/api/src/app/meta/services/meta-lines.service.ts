@@ -67,10 +67,7 @@ export class MetaLinesService {
                 wabaId: waba.id,
                 wabaName: waba.name ?? '',
                 name: details.verified_name ?? line.verified_name ?? '',
-                active:
-                  statusString === 'CONNECTED'
-                    ? LineConnectionStatus.CONNECTED
-                    : LineConnectionStatus.DISCONNECTED,
+                active: this.normalizeConnectionStatus(statusString),
                 verified: details.is_official_business_account ? 'Sim' : 'Não',
                 qualityRating: this.normalizeQualityRating(qualityString),
               };
@@ -146,10 +143,7 @@ export class MetaLinesService {
           wabaId: waba.id,
           wabaName: waba.name ?? '',
           name: details.verified_name ?? line.verified_name ?? '',
-          active:
-            statusString === 'CONNECTED'
-              ? LineConnectionStatus.CONNECTED
-              : LineConnectionStatus.DISCONNECTED,
+          active: this.normalizeConnectionStatus(statusString),
           verified: details.is_official_business_account ? 'Sim' : 'Não',
           qualityRating: this.normalizeQualityRating(qualityString),
         });
@@ -182,5 +176,17 @@ export class MetaLinesService {
     if (upperRating === 'RED') return LineQualityRating.LOW;
 
     return LineQualityRating.UNKNOWN;
+  }
+
+  private normalizeConnectionStatus(status: string): LineConnectionStatus {
+    const upperStatus = (status ?? '').toString().trim().toUpperCase();
+
+    if (upperStatus === 'CONNECTED') return LineConnectionStatus.CONNECTED;
+    if (upperStatus === 'PENDING') return LineConnectionStatus.PENDING;
+    if (upperStatus === 'FLAGGED') return LineConnectionStatus.FLAGGED;
+    if (upperStatus === 'MIGRATED') return LineConnectionStatus.MIGRATED;
+    if (upperStatus === 'DISCONNECTED') return LineConnectionStatus.DISCONNECTED;
+
+    return LineConnectionStatus.UNKNOWN;
   }
 }

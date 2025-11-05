@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Button,
   Typography,
@@ -13,14 +13,16 @@ import {
   Box,
   Chip,
   TableSortLabel,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   IconButton,
-  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Checkbox,
+  FormControlLabel,
+  TextField,
 } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import { useToast } from '../hooks/useToast';
 import { useSortable } from '../hooks/useSortable';
 import {
@@ -33,6 +35,7 @@ import {
 type SortableColumn =
   | 'id'
   | 'line'
+  | 'wabaId'
   | 'wabaName'
   | 'name'
   | 'active'
@@ -47,9 +50,10 @@ export default function MetaLinesExportPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [imWabas, setImWabas] = useState<ImWabaDto[]>([]);
   const [availableWabas, setAvailableWabas] = useState<Waba[]>([]);
-  const [selectedWabaId, setSelectedWabaId] = useState<string>('');
   const [isLoadingWabas, setIsLoadingWabas] = useState(true);
-  const [isAddingWaba, setIsAddingWaba] = useState(false);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [wabaSearchTerm, setWabaSearchTerm] = useState('');
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   const {
     sortBy,
@@ -65,6 +69,9 @@ export default function MetaLinesExportPage() {
       line: {
         accessor: (r) => r.line,
       },
+      wabaId: {
+        accessor: (r) => r.wabaId,
+      },
       wabaName: {
         accessor: (r) => r.wabaName,
       },
@@ -75,8 +82,12 @@ export default function MetaLinesExportPage() {
         accessor: (r) => r.active,
         type: 'enum',
         orderMap: {
-          CONNECTED: 1,
-          DISCONNECTED: 0,
+          CONNECTED: 6,
+          PENDING: 5,
+          FLAGGED: 4,
+          MIGRATED: 3,
+          DISCONNECTED: 2,
+          UNKNOWN: 1,
         },
       },
       verified: {
@@ -105,6 +116,18 @@ export default function MetaLinesExportPage() {
     loadAvailableWabas();
   }, []);
 
+  useEffect(() => {
+    if (!isLoadingWabas && imWabas.length > 0) {
+      loadLines();
+    }
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, [imWabas, isLoadingWabas]);
+
   const loadImWabas = async () => {
     try {
       const res = await fetch('/api/im-wabas');
@@ -130,12 +153,17 @@ export default function MetaLinesExportPage() {
   };
 
   const loadLines = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
     setRows([]);
     setProgress({ processed: 0, total: 0 });
     setCacheKey(null);
     setIsStreaming(true);
 
     const eventSource = new EventSource('/api/meta/lines/stream');
+    eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
       try {
@@ -153,6 +181,7 @@ export default function MetaLinesExportPage() {
           });
           setIsStreaming(false);
           eventSource.close();
+          eventSourceRef.current = null;
         }
       } catch (e) {
         console.error('Error parsing SSE event:', e);
@@ -164,73 +193,53 @@ export default function MetaLinesExportPage() {
       toast.error('Erro ao carregar dados.');
       setIsStreaming(false);
       eventSource.close();
-    };
-
-    return () => {
-      eventSource.close();
+      eventSourceRef.current = null;
     };
   };
 
-  const handleAddWaba = async () => {
-    if (!selectedWabaId) {
-      toast.error('Selecione um WABA para adicionar');
-      return;
-    }
-
-    const selectedWaba = availableWabas.find((w) => w.id === selectedWabaId);
-    if (!selectedWaba) {
-      toast.error('WABA não encontrado');
-      return;
-    }
-
-    setIsAddingWaba(true);
+  const handleToggleWaba = async (waba: Waba, isChecked: boolean) => {
     try {
-      const res = await fetch('/api/im-wabas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wabaId: selectedWaba.id,
-          wabaName: selectedWaba.name || selectedWaba.id,
-        }),
-      });
+      if (isChecked) {
+        const res = await fetch('/api/im-wabas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wabaId: waba.id,
+            wabaName: waba.name || waba.id,
+          }),
+        });
 
-      if (!res.ok) {
-        const error = await res.text();
-        throw new Error(error || 'Falha ao adicionar WABA');
+        if (!res.ok) {
+          const error = await res.text();
+          throw new Error(error || 'Falha ao adicionar WABA');
+        }
+      } else {
+        const res = await fetch(`/api/im-wabas/${waba.id}`, {
+          method: 'DELETE',
+        });
+
+        if (!res.ok) {
+          throw new Error('Falha ao remover WABA');
+        }
       }
 
-      toast.success('WABA adicionado com sucesso!');
-      setSelectedWabaId('');
       await loadImWabas();
-      loadLines();
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setIsAddingWaba(false);
-    }
-  };
-
-  const handleRemoveWaba = async (wabaId: string) => {
-    if (!confirm('Tem certeza que deseja remover este WABA?')) {
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/im-wabas/${wabaId}`, {
-        method: 'DELETE',
-      });
-
-      if (!res.ok) {
-        throw new Error('Falha ao remover WABA');
-      }
-
-      toast.success('WABA removido com sucesso!');
-      await loadImWabas();
-      loadLines();
     } catch (e) {
       toast.error((e as Error).message);
     }
   };
+
+  const isWabaSelected = (wabaId: string) => {
+    return imWabas.some((w) => w.wabaId === wabaId);
+  };
+
+  const filteredAvailableWabas = availableWabas.filter((waba) => {
+    const searchLower = wabaSearchTerm.toLowerCase();
+    return (
+      waba.id.toLowerCase().includes(searchLower) ||
+      (waba.name && waba.name.toLowerCase().includes(searchLower))
+    );
+  });
 
   const handleExportCsv = async () => {
     if (!cacheKey) {
@@ -263,6 +272,25 @@ export default function MetaLinesExportPage() {
     }
   };
 
+  const getStatusColor = (status: string): 'default' | 'success' | 'warning' | 'error' | 'info' => {
+    switch (status) {
+      case 'CONNECTED':
+        return 'success';
+      case 'PENDING':
+        return 'warning';
+      case 'FLAGGED':
+        return 'error';
+      case 'MIGRATED':
+        return 'info';
+      case 'DISCONNECTED':
+        return 'default';
+      case 'UNKNOWN':
+        return 'default';
+      default:
+        return 'default';
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -272,104 +300,22 @@ export default function MetaLinesExportPage() {
         Visualize e exporte todas as linhas do WhatsApp Business
       </Typography>
 
-      <Box sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          WABAs do Instant Messenger
-        </Typography>
-        <Typography variant="body2" color="text.secondary" gutterBottom>
-          Gerencie os WABAs que serão exibidos na listagem de linhas
-        </Typography>
-
-        {isLoadingWabas ? (
-          <LinearProgress sx={{ mt: 2 }} />
-        ) : (
-          <>
-            {imWabas.length === 0 && (
-              <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
-                Nenhum WABA cadastrado. Adicione um WABA para visualizar as linhas.
-              </Alert>
-            )}
-
-            {imWabas.length > 0 && (
-              <TableContainer component={Paper} sx={{ mt: 2, mb: 2 }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>ID do WABA</TableCell>
-                      <TableCell>Nome</TableCell>
-                      <TableCell align="right">Ações</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {imWabas.map((waba) => (
-                      <TableRow key={waba.wabaId}>
-                        <TableCell>{waba.wabaId}</TableCell>
-                        <TableCell>{waba.wabaName}</TableCell>
-                        <TableCell align="right">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleRemoveWaba(waba.wabaId)}
-                            title="Remover WABA"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
-              <FormControl sx={{ minWidth: 300 }}>
-                <InputLabel>Selecione um WABA</InputLabel>
-                <Select
-                  value={selectedWabaId}
-                  onChange={(e) => setSelectedWabaId(e.target.value)}
-                  label="Selecione um WABA"
-                  disabled={isAddingWaba}
-                >
-                  {availableWabas
-                    .filter((w) => !imWabas.some((im) => im.wabaId === w.id))
-                    .map((waba) => (
-                      <MenuItem key={waba.id} value={waba.id}>
-                        {waba.name || waba.id} ({waba.id})
-                      </MenuItem>
-                    ))}
-                </Select>
-              </FormControl>
-              <Button
-                variant="contained"
-                onClick={handleAddWaba}
-                disabled={!selectedWabaId || isAddingWaba}
-              >
-                {isAddingWaba ? 'Adicionando...' : 'Adicionar WABA'}
-              </Button>
-            </Box>
-          </>
-        )}
-      </Box>
-
       <Box sx={{ mt: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6">
             Linhas
           </Typography>
-          <Button
-            variant="outlined"
-            onClick={loadLines}
-            disabled={isStreaming || imWabas.length === 0}
+          <IconButton
+            onClick={() => setFilterDialogOpen(true)}
+            color="primary"
+            title="Filtrar WABAs"
           >
-            Carregar Linhas
-          </Button>
+            <FilterListIcon />
+          </IconButton>
         </Box>
         <Typography variant="body2" color="text.secondary" gutterBottom>
           {isStreaming
-            ? `Carregando... ${progress.processed} de ${
-                progress.total || '?'
-              } linha(s)`
+            ? `Carregando... ${progress.processed} linha(s) encontrada(s)`
             : `${rows.length} linha(s) encontrada(s)`}
         </Typography>
 
@@ -395,6 +341,15 @@ export default function MetaLinesExportPage() {
                     onClick={() => handleSort('line')}
                   >
                     Linha
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'wabaId'}
+                    direction={sortBy === 'wabaId' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('wabaId')}
+                  >
+                    ID do WABA
                   </TableSortLabel>
                 </TableCell>
                 <TableCell>
@@ -447,7 +402,7 @@ export default function MetaLinesExportPage() {
             <TableBody>
               {sortedRows.length === 0 && !isStreaming ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={8} align="center">
                     Nenhuma linha encontrada
                   </TableCell>
                 </TableRow>
@@ -456,14 +411,13 @@ export default function MetaLinesExportPage() {
                   <TableRow key={row.id} hover>
                     <TableCell>{row.id}</TableCell>
                     <TableCell>{row.line}</TableCell>
+                    <TableCell>{row.wabaId}</TableCell>
                     <TableCell>{row.wabaName}</TableCell>
                     <TableCell>{row.name}</TableCell>
                     <TableCell>
                       <Chip
                         label={row.active}
-                        color={
-                          row.active === 'CONNECTED' ? 'success' : 'default'
-                        }
+                        color={getStatusColor(row.active)}
                         size="small"
                       />
                     </TableCell>
@@ -506,6 +460,52 @@ export default function MetaLinesExportPage() {
           Exportar CSV
         </Button>
       </Box>
+
+      <Dialog
+        open={filterDialogOpen}
+        onClose={() => setFilterDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Filtrar WABAs</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Pesquisar WABA"
+            variant="outlined"
+            value={wabaSearchTerm}
+            onChange={(e) => setWabaSearchTerm(e.target.value)}
+            placeholder="Digite o nome ou ID do WABA"
+            sx={{ mb: 2, mt: 1 }}
+          />
+          <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+            {isLoadingWabas ? (
+              <LinearProgress />
+            ) : filteredAvailableWabas.length === 0 ? (
+              <Typography color="text.secondary" align="center">
+                Nenhum WABA encontrado
+              </Typography>
+            ) : (
+              filteredAvailableWabas.map((waba) => (
+                <FormControlLabel
+                  key={waba.id}
+                  control={
+                    <Checkbox
+                      checked={isWabaSelected(waba.id)}
+                      onChange={(e) => handleToggleWaba(waba, e.target.checked)}
+                    />
+                  }
+                  label={`${waba.name || waba.id} (${waba.id})`}
+                  sx={{ display: 'block', mb: 1 }}
+                />
+              ))
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFilterDialogOpen(false)}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

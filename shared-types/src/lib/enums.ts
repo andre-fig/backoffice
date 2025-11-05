@@ -20,5 +20,9 @@ export enum LineQualityRating {
 
 export enum LineConnectionStatus {
   CONNECTED = 'CONNECTED',
+  PENDING = 'PENDING',
+  FLAGGED = 'FLAGGED',
+  MIGRATED = 'MIGRATED',
   DISCONNECTED = 'DISCONNECTED',
+  UNKNOWN = 'UNKNOWN',
 }

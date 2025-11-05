@@ -82,12 +82,12 @@ const ChatRedirectForm = () => {
   const fetchRedirects = async () => {
     setLoadingRedirects(true);
     try {
-      const res = await fetch('/api/redirects');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const response = await fetch('/api/redirects');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
       setRedirects(data);
-    } catch (err) {
-      console.error('Failed to fetch redirects', err);
+    } catch (error) {
+      console.error('Failed to fetch redirects', error);
       toast.error('Erro ao carregar redirecionamentos.');
     } finally {
       setLoadingRedirects(false);
@@ -238,12 +238,12 @@ const ChatRedirectForm = () => {
   const fetchUserSectors = async (userId: string) => {
     setLoadingSectors(true);
     try {
-      const res = await fetch(`/api/redirects/users/${userId}/sectors`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const response = await fetch(`/api/redirects/users/${userId}/sectors`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
       setSectors(data);
-    } catch (err) {
-      console.error('Failed to fetch sectors', err);
+    } catch (error) {
+      console.error('Failed to fetch sectors', error);
       toast.error('Erro ao carregar setores do usuário.');
     } finally {
       setLoadingSectors(false);

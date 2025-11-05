@@ -348,9 +348,10 @@ const ChatRedirectForm = () => {
           </Typography>
 
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 2 }}>
-              <FormControl>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 2 }}>
+              <FormControl fullWidth>
                 <Autocomplete
+                  fullWidth
                   options={usersSaida}
                   getOptionLabel={(option) => option.name}
                   isOptionEqualToValue={(o, v) => o.id === v.id}
@@ -370,9 +371,10 @@ const ChatRedirectForm = () => {
                 />
               </FormControl>
 
-              <FormControl>
+              <FormControl fullWidth>
                 <InputLabel id="sector-label">Setor</InputLabel>
                 <Select
+                  fullWidth
                   labelId="sector-label"
                   value={selectedSector}
                   onChange={(e) => setSelectedSector(e.target.value)}
@@ -388,8 +390,9 @@ const ChatRedirectForm = () => {
                 </Select>
               </FormControl>
 
-              <FormControl>
+              <FormControl fullWidth>
                 <Autocomplete
+                  fullWidth
                   options={usersDestino}
                   getOptionLabel={(option) => option.name}
                   isOptionEqualToValue={(o, v) => o.id === v.id}
@@ -409,7 +412,7 @@ const ChatRedirectForm = () => {
                 />
               </FormControl>
 
-              <FormControl>
+              <FormControl fullWidth>
                 <DateRangePicker
                   value={dateRange}
                   onChange={(newValue) => setDateRange(newValue)}
@@ -417,13 +420,15 @@ const ChatRedirectForm = () => {
                   slotProps={{
                     textField: {
                       required: true,
+                      fullWidth: true,
+                      placeholder: 'dd/mm/yyyy',
                     },
                   }}
                 />
               </FormControl>
             </Box>
 
-            <Button type="submit" variant="contained" color="primary" fullWidth>
+            <Button type="submit" variant="contained" color="primary">
               Adicionar Redirecionamento
             </Button>
           </Box>

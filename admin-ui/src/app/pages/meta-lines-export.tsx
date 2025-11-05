@@ -44,6 +44,7 @@ type SortableColumn =
   | 'wabaId'
   | 'wabaName'
   | 'name'
+  | 'nameStatus'
   | 'active'
   | 'verified'
   | 'qualityRating';
@@ -90,6 +91,9 @@ export default function MetaLinesExportPage() {
       },
       name: {
         accessor: (r) => r.name,
+      },
+      nameStatus: {
+        accessor: (r) => r.nameStatus,
       },
       active: {
         accessor: (r) => r.active,
@@ -538,6 +542,15 @@ export default function MetaLinesExportPage() {
                 </TableCell>
                 <TableCell>
                   <TableSortLabel
+                    active={sortBy === 'nameStatus'}
+                    direction={sortBy === 'nameStatus' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('nameStatus')}
+                  >
+                    Status do Nome
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
                     active={sortBy === 'active'}
                     direction={sortBy === 'active' ? sortOrder : 'asc'}
                     onClick={() => handleSort('active')}
@@ -585,6 +598,7 @@ export default function MetaLinesExportPage() {
                     <TableCell>{row.wabaId}</TableCell>
                     <TableCell>{row.wabaName}</TableCell>
                     <TableCell>{row.name}</TableCell>
+                    <TableCell>{row.nameStatus}</TableCell>
                     <TableCell>
                       <Chip
                         label={row.active}

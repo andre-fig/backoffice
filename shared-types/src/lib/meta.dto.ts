@@ -35,6 +35,7 @@ export interface MetaLineRowDto {
   wabaId: string;
   wabaName: string;
   name: string;
+  nameStatus: string;
   active: LineConnectionStatus;
   verified: string;
   qualityRating: LineQualityRating;

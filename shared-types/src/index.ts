@@ -5,3 +5,4 @@ export * from './lib/vdi-users.dto';
 export * from './lib/meta.dto';
 export * from './lib/scheduled-redirect.dto';
 export * from './lib/enums';
+export * from './lib/im-waba.dto';

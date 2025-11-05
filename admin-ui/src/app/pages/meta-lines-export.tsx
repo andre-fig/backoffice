@@ -13,12 +13,21 @@ import {
   Box,
   Chip,
   TableSortLabel,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  IconButton,
+  Alert,
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useToast } from '../hooks/useToast';
 import { useSortable } from '../hooks/useSortable';
 import {
   MetaLineRowDto,
   MetaLinesStreamEvent,
+  ImWabaDto,
+  Waba,
 } from '@backoffice-monorepo/shared-types';
 
 type SortableColumn =
@@ -35,7 +44,12 @@ export default function MetaLinesExportPage() {
   const [rows, setRows] = useState<MetaLineRowDto[]>([]);
   const [progress, setProgress] = useState({ processed: 0, total: 0 });
   const [cacheKey, setCacheKey] = useState<string | null>(null);
-  const [isStreaming, setIsStreaming] = useState(true);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [imWabas, setImWabas] = useState<ImWabaDto[]>([]);
+  const [availableWabas, setAvailableWabas] = useState<Waba[]>([]);
+  const [selectedWabaId, setSelectedWabaId] = useState<string>('');
+  const [isLoadingWabas, setIsLoadingWabas] = useState(true);
+  const [isAddingWaba, setIsAddingWaba] = useState(false);
 
   const {
     sortBy,
@@ -87,6 +101,40 @@ export default function MetaLinesExportPage() {
   });
 
   useEffect(() => {
+    loadImWabas();
+    loadAvailableWabas();
+  }, []);
+
+  const loadImWabas = async () => {
+    try {
+      const res = await fetch('/api/im-wabas');
+      if (!res.ok) throw new Error('Falha ao carregar WABAs do IM');
+      const data: ImWabaDto[] = await res.json();
+      setImWabas(data);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setIsLoadingWabas(false);
+    }
+  };
+
+  const loadAvailableWabas = async () => {
+    try {
+      const res = await fetch('/api/meta/wabas');
+      if (!res.ok) throw new Error('Falha ao carregar WABAs disponíveis');
+      const data: Waba[] = await res.json();
+      setAvailableWabas(data);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  const loadLines = () => {
+    setRows([]);
+    setProgress({ processed: 0, total: 0 });
+    setCacheKey(null);
+    setIsStreaming(true);
+
     const eventSource = new EventSource('/api/meta/lines/stream');
 
     eventSource.onmessage = (event) => {
@@ -121,7 +169,68 @@ export default function MetaLinesExportPage() {
     return () => {
       eventSource.close();
     };
-  }, []);
+  };
+
+  const handleAddWaba = async () => {
+    if (!selectedWabaId) {
+      toast.error('Selecione um WABA para adicionar');
+      return;
+    }
+
+    const selectedWaba = availableWabas.find((w) => w.id === selectedWabaId);
+    if (!selectedWaba) {
+      toast.error('WABA não encontrado');
+      return;
+    }
+
+    setIsAddingWaba(true);
+    try {
+      const res = await fetch('/api/im-wabas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wabaId: selectedWaba.id,
+          wabaName: selectedWaba.name || selectedWaba.id,
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(error || 'Falha ao adicionar WABA');
+      }
+
+      toast.success('WABA adicionado com sucesso!');
+      setSelectedWabaId('');
+      await loadImWabas();
+      loadLines();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setIsAddingWaba(false);
+    }
+  };
+
+  const handleRemoveWaba = async (wabaId: string) => {
+    if (!confirm('Tem certeza que deseja remover este WABA?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/im-wabas/${wabaId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        throw new Error('Falha ao remover WABA');
+      }
+
+      toast.success('WABA removido com sucesso!');
+      await loadImWabas();
+      loadLines();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
 
   const handleExportCsv = async () => {
     if (!cacheKey) {
@@ -163,10 +272,99 @@ export default function MetaLinesExportPage() {
         Visualize e exporte todas as linhas do WhatsApp Business
       </Typography>
 
-      <Box sx={{ mt: 4 }}>
+      <Box sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h6" gutterBottom>
-          Linhas
+          WABAs do Instant Messenger
         </Typography>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Gerencie os WABAs que serão exibidos na listagem de linhas
+        </Typography>
+
+        {isLoadingWabas ? (
+          <LinearProgress sx={{ mt: 2 }} />
+        ) : (
+          <>
+            {imWabas.length === 0 && (
+              <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
+                Nenhum WABA cadastrado. Adicione um WABA para visualizar as linhas.
+              </Alert>
+            )}
+
+            {imWabas.length > 0 && (
+              <TableContainer component={Paper} sx={{ mt: 2, mb: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>ID do WABA</TableCell>
+                      <TableCell>Nome</TableCell>
+                      <TableCell align="right">Ações</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {imWabas.map((waba) => (
+                      <TableRow key={waba.wabaId}>
+                        <TableCell>{waba.wabaId}</TableCell>
+                        <TableCell>{waba.wabaName}</TableCell>
+                        <TableCell align="right">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleRemoveWaba(waba.wabaId)}
+                            title="Remover WABA"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+              <FormControl sx={{ minWidth: 300 }}>
+                <InputLabel>Selecione um WABA</InputLabel>
+                <Select
+                  value={selectedWabaId}
+                  onChange={(e) => setSelectedWabaId(e.target.value)}
+                  label="Selecione um WABA"
+                  disabled={isAddingWaba}
+                >
+                  {availableWabas
+                    .filter((w) => !imWabas.some((im) => im.wabaId === w.id))
+                    .map((waba) => (
+                      <MenuItem key={waba.id} value={waba.id}>
+                        {waba.name || waba.id} ({waba.id})
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
+              <Button
+                variant="contained"
+                onClick={handleAddWaba}
+                disabled={!selectedWabaId || isAddingWaba}
+              >
+                {isAddingWaba ? 'Adicionando...' : 'Adicionar WABA'}
+              </Button>
+            </Box>
+          </>
+        )}
+      </Box>
+
+      <Box sx={{ mt: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">
+            Linhas
+          </Typography>
+          <Button
+            variant="outlined"
+            onClick={loadLines}
+            disabled={isStreaming || imWabas.length === 0}
+          >
+            Carregar Linhas
+          </Button>
+        </Box>
         <Typography variant="body2" color="text.secondary" gutterBottom>
           {isStreaming
             ? `Carregando... ${progress.processed} de ${

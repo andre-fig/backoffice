@@ -12,6 +12,7 @@ import {
   tap,
 } from 'rxjs';
 import { MetaService } from '../meta.service';
+import { ImWabasService } from '../../im-wabas/im-wabas.service';
 import {
   MetaLineRowDto,
   MetaLinesStreamEvent,
@@ -27,6 +28,7 @@ export class MetaLinesService {
 
   constructor(
     private readonly metaService: MetaService,
+    private readonly imWabasService: ImWabasService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
 
@@ -35,7 +37,7 @@ export class MetaLinesService {
   ): Observable<MessageEvent<MetaLinesStreamEvent>> {
     const allRows: MetaLineRowDto[] = [];
 
-    return from(this.metaService.listWabas()).pipe(
+    return from(this.getFilteredWabas()).pipe(
       concatMap((wabas) => {
         let processedLines = 0;
 
@@ -51,7 +53,7 @@ export class MetaLinesService {
 
               const statusString = (line.status ?? '').toUpperCase();
               const qualityString =
-                details.quality_rating ?? line.quality_rating ?? '';
+                (details.quality_rating || line.quality_rating || '').trim();
 
               const row: MetaLineRowDto = {
                 id: line.id,
@@ -120,7 +122,7 @@ export class MetaLinesService {
   }
 
   async buildAllRows(): Promise<MetaLineRowDto[]> {
-    const wabas = await this.metaService.listWabas();
+    const wabas = await this.getFilteredWabas();
     const rows: MetaLineRowDto[] = [];
 
     for (const waba of wabas) {
@@ -130,7 +132,7 @@ export class MetaLinesService {
         const details = await this.metaService.getPhoneNumberDetails(line.id);
         const statusString = (line.status ?? '').toUpperCase();
         const qualityString =
-          details.quality_rating ?? line.quality_rating ?? '';
+          (details.quality_rating || line.quality_rating || '').trim();
 
         rows.push({
           id: line.id,
@@ -155,8 +157,19 @@ export class MetaLinesService {
     return this.cacheManager.get<MetaLineRowDto[]>(cacheKey);
   }
 
+  private async getFilteredWabas() {
+    const allWabas = await this.metaService.listWabas();
+    const storedWabaIds = await this.imWabasService.getAllWabaIds();
+    
+    if (storedWabaIds.length === 0) {
+      return [];
+    }
+    
+    return allWabas.filter((waba) => storedWabaIds.includes(waba.id));
+  }
+
   private normalizeQualityRating(rating: string): LineQualityRating {
-    const upperRating = rating.toUpperCase();
+    const upperRating = (rating ?? '').toString().trim().toUpperCase();
 
     if (upperRating === 'HIGH') return LineQualityRating.HIGH;
     if (upperRating === 'MEDIUM') return LineQualityRating.MEDIUM;

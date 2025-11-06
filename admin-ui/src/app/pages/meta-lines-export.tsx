@@ -226,7 +226,7 @@ export default function MetaLinesExportPage() {
 
   const handleToggleWaba = async (waba: BackofficeWaba, isChecked: boolean) => {
     try {
-      const res = await fetch(`/api/im-wabas/${waba.externalId}/visibility`, {
+      const res = await fetch(`/api/wabas/${waba.id}/visibility`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isVisible: isChecked }),
@@ -399,7 +399,6 @@ export default function MetaLinesExportPage() {
     }
   };
 
-
   const renderAnalyticsTable = () => {
     if (isLoadingAnalytics) {
       return (
@@ -428,15 +427,17 @@ export default function MetaLinesExportPage() {
     Object.entries(analyticsData).forEach(([date, dateData]) => {
       Object.entries(dateData).forEach(([, lineData]) => {
         Object.entries(lineData).forEach(([category, categoryData]) => {
-          Object.entries(categoryData).forEach(([pricingType, pricingTypeData]) => {
-            analyticsRows.push({
-              date,
-              category,
-              pricingType,
-              volume: pricingTypeData.volume,
-              cost: pricingTypeData.cost,
-            });
-          });
+          Object.entries(categoryData).forEach(
+            ([pricingType, pricingTypeData]) => {
+              analyticsRows.push({
+                date,
+                category,
+                pricingType,
+                volume: pricingTypeData.volume,
+                cost: pricingTypeData.cost,
+              });
+            }
+          );
         });
       });
     });

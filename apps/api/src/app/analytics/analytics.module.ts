@@ -6,7 +6,7 @@ import { Datasources } from '../../common/datasources.enum';
 import { AnalyticsService } from './analytics.service';
 import { AnalyticsController } from './analytics.controller';
 import { MetaService } from '../meta/meta.service';
-import { ImWabasService } from '../im-wabas/im-wabas.service';
+import { WabasService } from '../im-wabas/wabas.service';
 import { HttpModule } from '@nestjs/axios';
 import { WabaEntity } from '../../database/db-backoffice/entities/waba.entity';
 
@@ -19,7 +19,7 @@ import { WabaEntity } from '../../database/db-backoffice/entities/waba.entity';
     HttpModule,
   ],
   controllers: [AnalyticsController],
-  providers: [AnalyticsService, MetaService, ImWabasService],
+  providers: [AnalyticsService, MetaService, WabasService],
   exports: [AnalyticsService],
 })
 export class AnalyticsModule {}

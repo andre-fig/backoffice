@@ -10,9 +10,9 @@ import {
   concatMap,
   mergeMap,
   tap,
+  filter,
 } from 'rxjs';
-import { MetaService } from '../meta.service';
-import { ImWabasService } from '../../im-wabas/im-wabas.service';
+import { WabasService } from '../../im-wabas/wabas.service';
 import { MetaSyncService } from './meta-sync.service';
 import {
   MetaLineRowDto,
@@ -28,8 +28,7 @@ export class MetaLinesService {
   private readonly cacheTtl = this.SIX_HOURS_IN_MS;
 
   constructor(
-    private readonly metaService: MetaService,
-    private readonly imWabasService: ImWabasService,
+    private readonly wabasService: WabasService,
     private readonly metaSyncService: MetaSyncService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
@@ -46,7 +45,7 @@ export class MetaLinesService {
         return from(wabas).pipe(
           mergeMap(async (waba) => {
             const lines = await this.metaSyncService.getLinesForWaba(
-              waba.wabaId
+              waba.externalId
             );
             const lineRows: MetaLineRowDto[] = [];
 
@@ -58,7 +57,7 @@ export class MetaLinesService {
                 id: line.id,
                 externalId: line.externalId,
                 line: line.displayPhoneNumber || '',
-                wabaId: waba.wabaId,
+                wabaId: waba.externalId,
                 wabaName: waba.wabaName,
                 name: line.verifiedName || '',
                 nameStatus: line.nameStatus || '',
@@ -121,7 +120,7 @@ export class MetaLinesService {
     const rows: MetaLineRowDto[] = [];
 
     for (const waba of wabas) {
-      const lines = await this.metaSyncService.getLinesForWaba(waba.wabaId);
+      const lines = await this.metaSyncService.getLinesForWaba(waba.externalId);
 
       for (const line of lines) {
         const statusString = (line.status ?? '').toUpperCase();
@@ -131,7 +130,7 @@ export class MetaLinesService {
           id: line.id,
           externalId: line.externalId,
           line: line.displayPhoneNumber || '',
-          wabaId: waba.wabaId,
+          wabaId: waba.externalId,
           wabaName: waba.wabaName,
           name: line.verifiedName || '',
           nameStatus: line.nameStatus || '',
@@ -150,7 +149,7 @@ export class MetaLinesService {
   }
 
   private async getFilteredWabas() {
-    return this.imWabasService.getVisibleWabas();
+    return this.wabasService.findAll({ isVisible: true });
   }
 
   private normalizeQualityRating(rating: string): LineQualityRating {

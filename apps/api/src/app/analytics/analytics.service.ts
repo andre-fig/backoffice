@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AnalyticsEntity } from '../../database/db-backoffice/entities/analytics.entity';
 import { LineEntity } from '../../database/db-backoffice/entities/line.entity';
-import { ImWabasService } from '../im-wabas/im-wabas.service';
+import { WabasService } from '../im-wabas/wabas.service';
 import { Datasources } from '../../common/datasources.enum';
 import {
   PricingDataPoint,
@@ -21,7 +21,7 @@ export class AnalyticsService {
     private readonly analyticsRepository: Repository<AnalyticsEntity>,
     @InjectRepository(LineEntity, Datasources.DB_BACKOFFICE)
     private readonly lineRepository: Repository<LineEntity>,
-    private readonly imWabasService: ImWabasService,
+    private readonly imWabasService: WabasService,
     private readonly metaService: MetaService
   ) {}
 

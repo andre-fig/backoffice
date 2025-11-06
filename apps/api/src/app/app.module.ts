@@ -19,7 +19,7 @@ import { Datasources } from '../common/datasources.enum';
 import { VdiModule } from './vdi/vdi.module';
 import { AuthModule } from './auth/auth.module';
 import { MetaModule } from './meta/meta.module';
-import { ImWabasModule } from './im-wabas/im-wabas.module';
+import { WabasModule } from './im-wabas/wabas.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
@@ -90,7 +90,12 @@ import { AnalyticsModule } from './analytics/analytics.module';
           username: configService.get<string>('DB_BACKOFFICE_USERNAME'),
           password: configService.get<string>('DB_BACKOFFICE_PASSWORD'),
           database: configService.get<string>('DB_BACKOFFICE_DATABASE'),
-          entities: [ScheduledRedirectEntity, WabaEntity, LineEntity, AnalyticsEntity],
+          entities: [
+            ScheduledRedirectEntity,
+            WabaEntity,
+            LineEntity,
+            AnalyticsEntity,
+          ],
           synchronize: false,
           ssl: useSsl,
           ...(useSsl && {
@@ -109,7 +114,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     VdiModule,
     AuthModule,
     MetaModule,
-    ImWabasModule,
+    WabasModule,
     AnalyticsModule,
   ],
   controllers: [AppController],

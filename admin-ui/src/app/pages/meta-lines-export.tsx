@@ -80,8 +80,9 @@ export default function MetaLinesExportPage() {
   const [wabaSearchTerm, setWabaSearchTerm] = useState('');
   const [analyticsDialogOpen, setAnalyticsDialogOpen] = useState(false);
   const [selectedLine, setSelectedLine] = useState<MetaLineRowDto | null>(null);
-  const [analyticsData, setAnalyticsData] =
-    useState<WabaAnalyticsResponseDto | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<
+    WabaAnalyticsResponseDto[] | null
+  >(null);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
   const today = new Date().toISOString().split('T')[0];
   const [analyticsStartDate, setAnalyticsStartDate] = useState(today);
@@ -341,7 +342,7 @@ export default function MetaLinesExportPage() {
         `/api/analytics/line/${selectedLine.id}?${params.toString()}`
       );
       if (!res.ok) throw new Error('Falha ao carregar analytics');
-      const data: WabaAnalyticsResponseDto = await res.json();
+      const data: WabaAnalyticsResponseDto[] = await res.json();
       setAnalyticsData(data);
     } catch (e) {
       toast.error((e as Error).message);
@@ -399,6 +400,11 @@ export default function MetaLinesExportPage() {
     }
   };
 
+  const toNumber = (v: unknown): number => {
+    const n = typeof v === 'number' ? v : Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
   const renderAnalyticsTable = () => {
     if (isLoadingAnalytics) {
       return (
@@ -416,29 +422,15 @@ export default function MetaLinesExportPage() {
       );
     }
 
-    const analyticsRows: Array<{
-      date: string;
-      category: string;
-      pricingType: string;
-      volume: number;
-      cost: number;
-    }> = [];
-
-    for (const dataPoint of Object.values(analyticsData)) {
-      analyticsRows.push({
-        date: dataPoint.date,
-        category: dataPoint.pricingCategory,
-        pricingType: dataPoint.pricingType,
-        volume: dataPoint.volume,
-        cost: dataPoint.cost,
-      });
-    }
-
-    const totalConversations = analyticsRows.reduce(
-      (sum, row) => sum + row.volume,
+    const totalConversations = analyticsData.reduce(
+      (sum, point) => sum + toNumber(point.volume),
       0
     );
-    const totalCost = analyticsRows.reduce((sum, row) => sum + row.cost, 0);
+
+    const totalCost = analyticsData.reduce(
+      (sum, point) => sum + toNumber(point.cost),
+      0
+    );
 
     return (
       <Box>
@@ -471,13 +463,13 @@ export default function MetaLinesExportPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {analyticsRows.map((row, index) => (
-                <TableRow key={index}>
+              {analyticsData.map((row) => (
+                <TableRow key={row.id}>
                   <TableCell>{row.date}</TableCell>
                   <TableCell>
                     <Chip
-                      label={row.category || 'unknown'}
-                      color={getCategoryColor(row.category)}
+                      label={row.pricingCategory || 'unknown'}
+                      color={getCategoryColor(row.pricingCategory)}
                       size="small"
                     />
                   </TableCell>
@@ -489,10 +481,10 @@ export default function MetaLinesExportPage() {
                     />
                   </TableCell>
                   <TableCell align="right">
-                    {row.volume?.toLocaleString('pt-BR')}
+                    {toNumber(row.volume).toLocaleString('pt-BR')}
                   </TableCell>
                   <TableCell align="right">
-                    {formatCurrency(row.cost)}
+                    {formatCurrency(toNumber(row.cost))}
                   </TableCell>
                 </TableRow>
               ))}

@@ -167,12 +167,6 @@ export class MetaSyncService {
     }
   }
 
-  async getAllWabas(): Promise<WabaEntity[]> {
-    return this.wabaRepository.find({
-      order: { createdAt: 'DESC' },
-    });
-  }
-
   async getLinesForWaba(wabaId: string): Promise<LineEntity[]> {
     return this.lineRepository.find({
       where: { waba: { externalId: wabaId } },

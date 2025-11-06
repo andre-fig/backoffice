@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AnalyticsEntity } from '../../database/db-backoffice/entities/analytics.entity';
 import { LineEntity } from '../../database/db-backoffice/entities/line.entity';
-import { WabasService } from '../im-wabas/wabas.service';
+import { WabasService } from '../wabas/wabas.service';
 import { Datasources } from '../../common/datasources.enum';
 import {
   PricingDataPoint,

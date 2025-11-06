@@ -11,7 +11,7 @@ import {
   mergeMap,
   tap,
 } from 'rxjs';
-import { WabasService } from '../../im-wabas/wabas.service';
+import { WabasService } from '../../wabas/wabas.service';
 import { MetaSyncService } from './meta-sync.service';
 import {
   MetaLineRowDto,
@@ -29,7 +29,8 @@ export class MetaLinesService {
   constructor(
     private readonly wabasService: WabasService,
     private readonly metaSyncService: MetaSyncService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache
   ) {}
 
   streamAllLines(

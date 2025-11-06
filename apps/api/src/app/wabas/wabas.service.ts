@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WabaEntity } from '../../database/db-backoffice/entities/waba.entity';
@@ -6,8 +6,6 @@ import { Datasources } from '../../common/datasources.enum';
 
 @Injectable()
 export class WabasService {
-  private readonly logger = new Logger(WabasService.name);
-
   constructor(
     @InjectRepository(WabaEntity, Datasources.DB_BACKOFFICE)
     private readonly wabaRepository: Repository<WabaEntity>

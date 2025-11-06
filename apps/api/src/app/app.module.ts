@@ -19,7 +19,7 @@ import { Datasources } from '../common/datasources.enum';
 import { VdiModule } from './vdi/vdi.module';
 import { AuthModule } from './auth/auth.module';
 import { MetaModule } from './meta/meta.module';
-import { WabasModule } from './im-wabas/wabas.module';
+import { WabasModule } from './wabas/wabas.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({

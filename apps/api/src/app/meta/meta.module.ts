@@ -6,7 +6,7 @@ import { MetaController } from './meta.controller';
 import { MetaLinesService } from './services/meta-lines.service';
 import { CsvExportService } from './services/csv-export.service';
 import { MetaSyncService } from './services/meta-sync.service';
-import { WabasModule } from '../im-wabas/wabas.module';
+import { WabasModule } from '../wabas/wabas.module';
 import { WabaEntity } from '../../database/db-backoffice/entities/waba.entity';
 import { LineEntity } from '../../database/db-backoffice/entities/line.entity';
 import { Datasources } from '../../common/datasources.enum';

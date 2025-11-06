@@ -6,7 +6,7 @@ import { Datasources } from '../../common/datasources.enum';
 import { AnalyticsService } from './analytics.service';
 import { AnalyticsController } from './analytics.controller';
 import { MetaService } from '../meta/meta.service';
-import { WabasService } from '../im-wabas/wabas.service';
+import { WabasService } from '../wabas/wabas.service';
 import { HttpModule } from '@nestjs/axios';
 import { WabaEntity } from '../../database/db-backoffice/entities/waba.entity';
 

@@ -20,13 +20,15 @@ import {
   ExportLinesCsvQueryDto,
   MetaLineRowDto,
 } from '@backoffice-monorepo/shared-types';
+import { WabasService } from '../wabas/wabas.service';
 
 @Controller('meta')
 export class MetaController {
   constructor(
     private readonly metaLinesService: MetaLinesService,
     private readonly csvExportService: CsvExportService,
-    private readonly metaSyncService: MetaSyncService
+    private readonly metaSyncService: MetaSyncService,
+    private readonly wabasService: WabasService
   ) {}
 
   @Post('sync')
@@ -37,7 +39,7 @@ export class MetaController {
 
   @Get('wabas')
   async getWabas() {
-    return await this.metaSyncService.getAllWabas();
+    return await this.wabasService.findAll();
   }
 
   @Get('wabas/:wabaId/lines')

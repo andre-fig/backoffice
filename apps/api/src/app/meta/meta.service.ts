@@ -34,7 +34,6 @@ export class MetaService {
   private readonly baseURL: string;
   private readonly accessToken: string;
   private readonly businessId: string;
-  private readonly allowedWabaIds: Set<string>;
 
   constructor(
     private readonly http: HttpService,
@@ -44,11 +43,6 @@ export class MetaService {
     this.baseURL = `https://graph.facebook.com/${version}`;
     this.accessToken = this.config.get<string>('META_ACCESS_TOKEN') ?? '';
     this.businessId = this.config.get<string>('META_BUSINESS_ID') ?? '';
-    const allowed = (this.config.get<string>('META_ALLOWED_WABA_IDS') ?? '')
-      .split(',')
-      .map((idString) => idString.trim())
-      .filter(Boolean);
-    this.allowedWabaIds = new Set<string>(allowed);
   }
 
   private async request<R>(url: string, params: QueryParams = {}): Promise<R> {
@@ -111,14 +105,12 @@ export class MetaService {
   }
 
   async listWabas(): Promise<Waba[]> {
-    const wabas = await this.requestAllPages<Waba>(
+    return await this.requestAllPages<Waba>(
       `/${this.businessId}/owned_whatsapp_business_accounts`,
       {
         fields: 'id,name',
       }
     );
-    if (this.allowedWabaIds.size === 0) return wabas;
-    return wabas.filter((waba) => this.allowedWabaIds.has(waba.id));
   }
 
   async listLines(wabaId: string): Promise<PhoneNumber[]> {

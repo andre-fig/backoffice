@@ -1,17 +1,22 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  Index,
+} from 'typeorm';
 import { LineEntity } from './line.entity';
 
 @Entity('wabas')
-@Index(['externalSource', 'externalId'], { unique: true })
+@Index(['externalId'], { unique: true })
 export class WabaEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column('text', { name: 'external_id' })
   externalId: string;
-
-  @Column('text', { name: 'external_source', default: 'META' })
-  externalSource: string;
 
   @Column('text', { name: 'waba_name' })
   wabaName: string;

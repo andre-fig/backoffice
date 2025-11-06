@@ -8,14 +8,17 @@ export class RedirectsSchedulerService {
 
   constructor(private readonly redirectsService: RedirectsService) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async handleScheduledRedirects() {
     this.logger.log('Processando redirecionamentos agendados...');
     try {
       await this.redirectsService.processScheduledRedirects();
       this.logger.log('Processamento de redirecionamentos concluído.');
     } catch (error) {
-      this.logger.error('Erro ao processar redirecionamentos agendados:', error);
+      this.logger.error(
+        'Erro ao processar redirecionamentos agendados:',
+        error
+      );
     }
   }
 }

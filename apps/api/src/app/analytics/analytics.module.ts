@@ -1,24 +1,25 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { HttpModule } from '@nestjs/axios';
 import { AnalyticsEntity } from '../../database/db-backoffice/entities/analytics.entity';
 import { LineEntity } from '../../database/db-backoffice/entities/line.entity';
 import { Datasources } from '../../common/datasources.enum';
 import { AnalyticsService } from './analytics.service';
 import { AnalyticsController } from './analytics.controller';
-import { ImWabasModule } from '../im-wabas/im-wabas.module';
+import { MetaService } from '../meta/meta.service';
+import { ImWabasService } from '../im-wabas/im-wabas.service';
+import { HttpModule } from '@nestjs/axios';
+import { WabaEntity } from '../../database/db-backoffice/entities/waba.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature(
-      [AnalyticsEntity, LineEntity],
+      [AnalyticsEntity, LineEntity, WabaEntity],
       Datasources.DB_BACKOFFICE
     ),
     HttpModule,
-    ImWabasModule,
   ],
   controllers: [AnalyticsController],
-  providers: [AnalyticsService],
+  providers: [AnalyticsService, MetaService, ImWabasService],
   exports: [AnalyticsService],
 })
 export class AnalyticsModule {}

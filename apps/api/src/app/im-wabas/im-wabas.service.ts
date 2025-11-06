@@ -1,9 +1,18 @@
-import { Injectable, Logger, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WabaEntity } from '../../database/db-backoffice/entities/waba.entity';
 import { Datasources } from '../../common/datasources.enum';
-import { ImWabaDto, AddImWabaDto, UpdateImWabaVisibilityDto } from '@backoffice-monorepo/shared-types';
+import {
+  ImWabaDto,
+  AddImWabaDto,
+  UpdateImWabaVisibilityDto,
+} from '@backoffice-monorepo/shared-types';
 
 @Injectable()
 export class ImWabasService {
@@ -23,7 +32,7 @@ export class ImWabasService {
 
   async findOne(wabaId: string): Promise<ImWabaDto | null> {
     const entity = await this.imWabaRepository.findOne({
-      where: { externalId: wabaId, externalSource: 'META' },
+      where: { externalId: wabaId },
     });
     return entity ? this.toDto(entity) : null;
   }
@@ -38,7 +47,6 @@ export class ImWabasService {
 
     const entity = this.imWabaRepository.create({
       externalId: dto.wabaId,
-      externalSource: 'META',
       wabaName: dto.wabaName,
     });
 
@@ -49,7 +57,7 @@ export class ImWabasService {
 
   async remove(wabaId: string): Promise<void> {
     const entity = await this.imWabaRepository.findOne({
-      where: { externalId: wabaId, externalSource: 'META' },
+      where: { externalId: wabaId },
     });
 
     if (!entity) {
@@ -62,7 +70,6 @@ export class ImWabasService {
 
   async getAllWabaIds(): Promise<string[]> {
     const entities = await this.imWabaRepository.find({
-      where: { externalSource: 'META' },
       select: ['externalId'],
     });
     return entities.map((entity) => entity.externalId);
@@ -70,7 +77,7 @@ export class ImWabasService {
 
   async updateVisibility(dto: UpdateImWabaVisibilityDto): Promise<ImWabaDto> {
     const entity = await this.imWabaRepository.findOne({
-      where: { externalId: dto.wabaId, externalSource: 'META' },
+      where: { externalId: dto.wabaId },
     });
 
     if (!entity) {
@@ -79,7 +86,9 @@ export class ImWabasService {
 
     entity.isVisible = dto.isVisible;
     const saved = await this.imWabaRepository.save(entity);
-    this.logger.log(`WABA ${dto.wabaId} visibilidade atualizada para ${dto.isVisible}`);
+    this.logger.log(
+      `WABA ${dto.wabaId} visibilidade atualizada para ${dto.isVisible}`
+    );
     return this.toDto(saved);
   }
 

@@ -28,6 +28,27 @@ export interface PhoneNumberDetails {
   quality_rating?: string;
 }
 
+export interface PricingDataPoint {
+  start: number;
+  end: number;
+  phone_number: string;
+  pricing_type: string;
+  pricing_category: string;
+  volume: number;
+  cost: number;
+}
+
+export interface PricingAnalyticsResponse {
+  pricing_analytics: {
+    data: [
+      {
+        data_points: PricingDataPoint[];
+      }
+    ];
+  };
+  id: string;
+}
+
 export interface MetaLineRowDto {
   id: string;
   externalId: string;

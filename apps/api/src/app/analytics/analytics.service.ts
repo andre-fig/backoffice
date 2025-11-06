@@ -2,36 +2,19 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
-import { lastValueFrom } from 'rxjs';
 import { AnalyticsEntity } from '../../database/db-backoffice/entities/analytics.entity';
 import { LineEntity } from '../../database/db-backoffice/entities/line.entity';
 import { ImWabasService } from '../im-wabas/im-wabas.service';
 import { Datasources } from '../../common/datasources.enum';
-import { WabaAnalyticsResponseDto } from '@backoffice-monorepo/shared-types';
-
-interface ConversationAnalyticsDataPoint {
-  start: number;
-  end: number;
-  conversation: number;
-  phone_number: string;
-  conversation_category: string;
-  conversation_direction: string;
-  cost: number;
-}
-
-interface ConversationAnalyticsResponse {
-  data: Array<{
-    data_points: ConversationAnalyticsDataPoint[];
-  }>;
-}
+import {
+  PricingDataPoint,
+  WabaAnalyticsResponseDto,
+} from '@backoffice-monorepo/shared-types';
+import { MetaService } from '../meta/meta.service';
 
 @Injectable()
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
-  private readonly baseURL: string;
-  private readonly accessToken: string;
 
   constructor(
     @InjectRepository(AnalyticsEntity, Datasources.DB_BACKOFFICE)
@@ -39,18 +22,13 @@ export class AnalyticsService {
     @InjectRepository(LineEntity, Datasources.DB_BACKOFFICE)
     private readonly lineRepository: Repository<LineEntity>,
     private readonly imWabasService: ImWabasService,
-    private readonly http: HttpService,
-    private readonly config: ConfigService
-  ) {
-    const version = this.config.get<string>('META_GRAPH_VERSION') ?? 'v20.0';
-    this.baseURL = `https://graph.facebook.com/${version}`;
-    this.accessToken = this.config.get<string>('META_ACCESS_TOKEN') ?? '';
-  }
+    private readonly metaService: MetaService
+  ) {}
 
-  @Cron(CronExpression.EVERY_10_MINUTES)
+  @Cron(CronExpression.EVERY_30_MINUTES)
   async collectAnalytics() {
     this.logger.log('Starting analytics collection cron job');
-    
+
     try {
       const wabaIds = await this.imWabasService.getAllWabaIds();
       this.logger.log(`Found ${wabaIds.length} WABAs to process`);
@@ -66,76 +44,134 @@ export class AnalyticsService {
   }
 
   private normalizePhoneNumber(phoneNumber: string): string {
-    return phoneNumber.replace(/[^\d+]/g, '');
+    const normalized = phoneNumber.replace(/[^\d]/g, '');
+    return `+${normalized}`;
   }
 
   async collectAnalyticsForWaba(wabaId: string): Promise<void> {
+    this.logger.log(
+      `Starting analytics collection for WABA ${wabaId} (yesterday and today).`
+    );
+
     try {
       const now = new Date();
-      const yesterday = new Date(now);
-      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+      const yearUTC = now.getUTCFullYear();
+      const monthUTC = now.getUTCMonth();
+      const dayUTC = now.getUTCDate();
 
-      const yesterdayStart = new Date(Date.UTC(
-        yesterday.getUTCFullYear(),
-        yesterday.getUTCMonth(),
-        yesterday.getUTCDate(),
-        0, 0, 0, 0
-      ));
-      const todayEnd = new Date(Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        23, 59, 59, 999
-      ));
-
-      const startTimestamp = Math.floor(yesterdayStart.getTime() / 1000);
-      const endTimestamp = Math.floor(todayEnd.getTime() / 1000);
-
-      this.logger.log(`Collecting analytics for WABA ${wabaId} from ${yesterdayStart.toISOString()} to ${todayEnd.toISOString()}`);
-
-      const url = `${this.baseURL}/${wabaId}`;
-      const params = {
-        fields: `conversation_analytics.start(${startTimestamp}).end(${endTimestamp}).granularity(DAILY).metric_types(['COST','CONVERSATION']).dimensions(['PHONE','CONVERSATION_CATEGORY','CONVERSATION_DIRECTION'])`,
-        access_token: this.accessToken,
-      };
-
-      const response = await lastValueFrom(
-        this.http.get<ConversationAnalyticsResponse>(url, { params })
+      const yesterdayStart = new Date(
+        Date.UTC(yearUTC, monthUTC, dayUTC - 1, 0, 0, 0, 0)
+      );
+      const yesterdayEnd = new Date(
+        Date.UTC(yearUTC, monthUTC, dayUTC - 1, 23, 59, 59, 999)
+      );
+      const todayStart = new Date(
+        Date.UTC(yearUTC, monthUTC, dayUTC, 0, 0, 0, 0)
+      );
+      const todayEnd = new Date(
+        Date.UTC(yearUTC, monthUTC, dayUTC, 23, 59, 59, 999)
       );
 
-      if (response.data?.data?.[0]?.data_points) {
-        const dataPoints = response.data.data[0].data_points;
-        this.logger.log(`Received ${dataPoints.length} data points for WABA ${wabaId}`);
+      const results = await Promise.allSettled([
+        this.fetchAndSaveAnalyticsForRange(
+          wabaId,
+          yesterdayStart,
+          yesterdayEnd
+        ),
+        this.fetchAndSaveAnalyticsForRange(wabaId, todayStart, todayEnd),
+      ]);
 
-        for (const dataPoint of dataPoints) {
-          await this.saveDataPoint(dataPoint);
+      for (const [index, result] of results.entries()) {
+        if (result.status === 'rejected') {
+          const day = index === 0 ? 'yesterday' : 'today';
+          this.logger.error(
+            `Failed to process analytics for ${day} for WABA ${wabaId}`,
+            result.reason
+          );
         }
-      } else {
-        this.logger.log(`No data points found for WABA ${wabaId}`);
       }
+
+      this.logger.log(
+        `Completed analytics collection cycle for WABA ${wabaId}.`
+      );
     } catch (error) {
-      this.logger.error(`Error collecting analytics for WABA ${wabaId}`, error);
+      this.logger.error(
+        `Critical error during analytics collection setup for WABA ${wabaId}`,
+        error
+      );
     }
   }
 
-  private async saveDataPoint(dataPoint: ConversationAnalyticsDataPoint): Promise<void> {
+  private async fetchAndSaveAnalyticsForRange(
+    wabaId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<void> {
+    this.logger.log(
+      `Fetching analytics for WABA ${wabaId} from ${startDate.toISOString()} to ${endDate.toISOString()}`
+    );
+
+    try {
+      const conversationAnalytics = await this.metaService.getAnalytics(
+        wabaId,
+        startDate,
+        endDate
+      );
+
+      const dataPoints =
+        conversationAnalytics?.pricing_analytics?.data?.[0]?.data_points ?? [];
+
+      if (dataPoints.length === 0) {
+        this.logger.log(
+          `No data points found for WABA ${wabaId} in this range.`
+        );
+        return;
+      }
+
+      this.logger.log(
+        `Found ${dataPoints.length} data points. Saving valid ones...`
+      );
+
+      const savePromises = dataPoints
+        .filter((dataPoint) => dataPoint?.phone_number)
+        .map((dataPoint) => this.saveDataPoint(dataPoint));
+
+      await Promise.all(savePromises);
+
+      this.logger.log(
+        `Successfully saved data points for range: ${startDate.toISOString()}`
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error processing range ${startDate.toISOString()} for WABA ${wabaId}`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  private async saveDataPoint(dataPoint: PricingDataPoint): Promise<void> {
     try {
       const dateTimestamp = new Date(dataPoint.start * 1000);
-      const date = new Date(Date.UTC(
-        dateTimestamp.getUTCFullYear(),
-        dateTimestamp.getUTCMonth(),
-        dateTimestamp.getUTCDate(),
-        0, 0, 0, 0
-      ));
 
-      const normalizedPhoneNumber = this.normalizePhoneNumber(dataPoint.phone_number);
-      
+      const yearUTC = dateTimestamp.getUTCFullYear();
+      const monthUTC = dateTimestamp.getUTCMonth();
+      const dayUTC = dateTimestamp.getUTCDate();
+
+      const date = new Date(yearUTC, monthUTC, dayUTC);
+
+      const normalizedPhoneNumber = this.normalizePhoneNumber(
+        dataPoint.phone_number
+      );
+
       const line = await this.lineRepository.findOne({
-        where: { normalizedPhoneNumber, externalSource: 'META' },
+        where: { normalizedPhoneNumber },
       });
 
       if (!line) {
-        this.logger.warn(`Line not found for phone number ${dataPoint.phone_number} (normalized: ${normalizedPhoneNumber}), skipping data point`);
+        this.logger.warn(
+          `Line not found for phone number ${dataPoint.phone_number} (normalized: ${normalizedPhoneNumber}), skipping data point`
+        );
         return;
       }
 
@@ -143,27 +179,32 @@ export class AnalyticsService {
         where: {
           lineId: line.id,
           date: date,
-          conversationCategory: dataPoint.conversation_category,
-          conversationDirection: dataPoint.conversation_direction,
+          pricingCategory: dataPoint.pricing_category,
+          pricingType: dataPoint.pricing_type,
         },
       });
 
       if (existing) {
-        existing.conversationCount = dataPoint.conversation;
-        existing.cost = dataPoint.cost;
+        existing.volume = dataPoint.volume;
+        existing.cost = dataPoint.cost ?? 0;
         await this.analyticsRepository.save(existing);
-        this.logger.debug(`Updated analytics for line ${line.id} on ${date.toISOString()}`);
+        this.logger.debug(
+          `Updated analytics for line ${line.id} on ${date.toISOString()}`
+        );
       } else {
         const analytics = this.analyticsRepository.create({
           lineId: line.id,
           date: date,
-          conversationCategory: dataPoint.conversation_category,
-          conversationDirection: dataPoint.conversation_direction,
-          conversationCount: dataPoint.conversation,
-          cost: dataPoint.cost,
+          pricingCategory: dataPoint.pricing_category,
+          pricingType: dataPoint.pricing_type,
+          volume: dataPoint.volume,
+          cost: dataPoint.cost ?? 0,
         });
+
         await this.analyticsRepository.save(analytics);
-        this.logger.debug(`Created analytics for line ${line.id} on ${date.toISOString()}`);
+        this.logger.debug(
+          `Created analytics for line ${line.id} on ${date.toISOString()}`
+        );
       }
     } catch (error) {
       this.logger.error('Error saving data point', error);
@@ -186,7 +227,6 @@ export class AnalyticsService {
       .leftJoinAndSelect('analytics.line', 'line')
       .leftJoinAndSelect('line.waba', 'waba')
       .where('waba.externalId = :wabaId', { wabaId })
-      .andWhere('waba.externalSource = :source', { source: 'META' })
       .andWhere('analytics.date BETWEEN :start AND :end', { start, end })
       .getMany();
 
@@ -222,8 +262,8 @@ export class AnalyticsService {
     for (const item of analytics) {
       const dateStr = item.date.toISOString().split('T')[0];
       const phoneNumber = item.line.displayPhoneNumber;
-      const category = item.conversationCategory;
-      const direction = item.conversationDirection;
+      const pricingCategory = item.pricingCategory;
+      const pricingType = item.pricingType;
 
       if (!result[dateStr]) {
         result[dateStr] = {};
@@ -233,12 +273,12 @@ export class AnalyticsService {
         result[dateStr][phoneNumber] = {};
       }
 
-      if (!result[dateStr][phoneNumber][category]) {
-        result[dateStr][phoneNumber][category] = {};
+      if (!result[dateStr][phoneNumber][pricingCategory]) {
+        result[dateStr][phoneNumber][pricingCategory] = {};
       }
 
-      result[dateStr][phoneNumber][category][direction] = {
-        conversations: item.conversationCount,
+      result[dateStr][phoneNumber][pricingCategory][pricingType] = {
+        volume: item.volume,
         cost: Number(item.cost),
       };
     }

@@ -11,6 +11,8 @@ import {
   Waba,
   PhoneNumber,
   PhoneNumberDetails,
+  MethodsEnum,
+  PricingAnalyticsResponse,
 } from '@backoffice-monorepo/shared-types';
 
 interface GraphApiResponse<T> {
@@ -59,7 +61,7 @@ export class MetaService {
 
     const config: AxiosRequestConfig = {
       baseURL: this.baseURL,
-      method: 'get',
+      method: MethodsEnum.GET,
       url,
       params: { access_token: this.accessToken, ...params },
     };
@@ -131,6 +133,24 @@ export class MetaService {
     return this.request<PhoneNumberDetails>(`/${phoneNumberId}`, {
       fields:
         'id,display_phone_number,verified_name,name_status,is_official_business_account,quality_rating',
+    });
+  }
+
+  async getAnalytics(
+    wabaId: string,
+    since: Date,
+    until: Date
+  ): Promise<PricingAnalyticsResponse> {
+    const startTimestamp = Math.floor(since.getTime() / 1000);
+    const endTimestamp = Math.floor(until.getTime() / 1000);
+
+    return await this.request<PricingAnalyticsResponse>(`/${wabaId}`, {
+      fields:
+        `pricing_analytics` +
+        `.start(${startTimestamp})` +
+        `.end(${endTimestamp})` +
+        `.granularity(DAILY)` +
+        `.dimensions(PHONE,PRICING_CATEGORY,PRICING_TYPE)`,
     });
   }
 }

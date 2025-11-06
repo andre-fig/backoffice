@@ -11,7 +11,7 @@ import {
 import { WabaEntity } from './waba.entity';
 
 @Entity('lines')
-@Index(['externalSource', 'externalId'], { unique: true })
+@Index(['externalId'], { unique: true })
 @Index(['normalizedPhoneNumber'])
 export class LineEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -19,9 +19,6 @@ export class LineEntity {
 
   @Column('text', { name: 'external_id' })
   externalId: string;
-
-  @Column('text', { name: 'external_source', default: 'META' })
-  externalSource: string;
 
   @Column('text', { name: 'normalized_phone_number', nullable: true })
   normalizedPhoneNumber: string;

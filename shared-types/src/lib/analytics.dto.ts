@@ -1,8 +1,8 @@
 export interface ConversationAnalyticsDto {
   lineId: string;
   date: string;
-  conversationCategory: string;
-  conversationDirection: string;
+  pricingCategory: string;
+  pricingType: string;
   conversationCount: number;
   cost: number;
 }
@@ -13,7 +13,7 @@ export interface GetWabaAnalyticsQueryDto {
 }
 
 export interface DirectionData {
-  conversations: number;
+  volume: number;
   cost: number;
 }
 

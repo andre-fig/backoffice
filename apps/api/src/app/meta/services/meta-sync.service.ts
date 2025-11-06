@@ -20,7 +20,7 @@ export class MetaSyncService {
     private readonly lineRepository: Repository<LineEntity>
   ) {}
 
-  @Cron(CronExpression.EVERY_10_MINUTES)
+  @Cron(CronExpression.EVERY_HOUR)
   async scheduledSync() {
     this.logger.log('Iniciando sincronização agendada com Meta API');
     await this.syncMetaData();
@@ -60,7 +60,7 @@ export class MetaSyncService {
   private async syncWaba(wabaId: string, wabaName: string): Promise<void> {
     try {
       let waba = await this.wabaRepository.findOne({
-        where: { externalId: wabaId, externalSource: 'META' },
+        where: { externalId: wabaId },
       });
 
       if (waba) {
@@ -70,7 +70,6 @@ export class MetaSyncService {
       } else {
         waba = this.wabaRepository.create({
           externalId: wabaId,
-          externalSource: 'META',
           wabaName,
           isVisible: false,
         });
@@ -91,7 +90,7 @@ export class MetaSyncService {
       );
 
       const waba = await this.wabaRepository.findOne({
-        where: { externalId: wabaId, externalSource: 'META' },
+        where: { externalId: wabaId },
       });
 
       if (!waba) {
@@ -144,7 +143,6 @@ export class MetaSyncService {
 
       const lineData = {
         externalId: lineId,
-        externalSource: 'META',
         waba: { id: wabaUuid } as WabaEntity,
         displayPhoneNumber,
         normalizedPhoneNumber,
@@ -157,10 +155,7 @@ export class MetaSyncService {
       };
 
       if (exists) {
-        await this.lineRepository.update(
-          { externalId: lineId, externalSource: 'META' },
-          lineData
-        );
+        await this.lineRepository.update({ externalId: lineId }, lineData);
         this.logger.debug(`Linha ${lineId} atualizada`);
       } else {
         const line = this.lineRepository.create(lineData);
@@ -174,21 +169,20 @@ export class MetaSyncService {
 
   async getVisibleWabas(): Promise<WabaEntity[]> {
     return this.wabaRepository.find({
-      where: { isVisible: true, externalSource: 'META' },
+      where: { isVisible: true },
       order: { createdAt: 'DESC' },
     });
   }
 
   async getAllWabas(): Promise<WabaEntity[]> {
     return this.wabaRepository.find({
-      where: { externalSource: 'META' },
       order: { createdAt: 'DESC' },
     });
   }
 
   async getLinesForWaba(wabaId: string): Promise<LineEntity[]> {
     return this.lineRepository.find({
-      where: { waba: { externalId: wabaId, externalSource: 'META' } },
+      where: { waba: { externalId: wabaId } },
       order: { createdAt: 'DESC' },
     });
   }

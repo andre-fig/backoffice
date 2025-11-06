@@ -25,7 +25,10 @@ import { DateRangePicker } from '@mui/x-date-pickers-pro/DateRangePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { ptBR } from 'date-fns/locale';
-import { RedirectListResponseDto, RedirectStatus } from '@backoffice-monorepo/shared-types';
+import {
+  RedirectListResponseDto,
+  RedirectStatus,
+} from '@backoffice-monorepo/shared-types';
 import { useToast } from '../hooks/useToast';
 import { useSortable } from '../hooks/useSortable';
 
@@ -53,40 +56,42 @@ const ChatRedirectForm = () => {
   const [redirects, setRedirects] = useState<RedirectListResponseDto[]>([]);
   const [loadingRedirects, setLoadingRedirects] = useState(false);
 
-  const { sortBy, sortOrder, handleSort, sortedData: sortedRedirects } = useSortable(
-    redirects,
-    {
-      initialColumn: 'startDate' as SortableColumn,
-      initialOrder: 'desc',
-      columns: {
-        status: {
-          accessor: (r) => r.status,
-          type: 'enum',
-          orderMap: {
-            [RedirectStatus.ACTIVE]: 0,
-            [RedirectStatus.SCHEDULED]: 1,
-          },
-        },
-        sectorName: {
-          accessor: (r) => r.sectorName || '',
-        },
-        sourceUserName: {
-          accessor: (r) => r.sourceUserName || r.sourceUserId || '',
-        },
-        destinationUserName: {
-          accessor: (r) => r.destinationUserName || '',
-        },
-        startDate: {
-          accessor: (r) => r.startDate,
-          type: 'date',
-        },
-        endDate: {
-          accessor: (r) => r.endDate,
-          type: 'date',
+  const {
+    sortBy,
+    sortOrder,
+    handleSort,
+    sortedData: sortedRedirects,
+  } = useSortable(redirects, {
+    initialColumn: 'startDate' as SortableColumn,
+    initialOrder: 'desc',
+    columns: {
+      status: {
+        accessor: (r) => r.status,
+        type: 'enum',
+        orderMap: {
+          [RedirectStatus.ACTIVE]: 0,
+          [RedirectStatus.SCHEDULED]: 1,
         },
       },
-    }
-  );
+      sectorName: {
+        accessor: (r) => r.sectorName || '',
+      },
+      sourceUserName: {
+        accessor: (r) => r.sourceUserName || r.sourceUserId || '',
+      },
+      destinationUserName: {
+        accessor: (r) => r.destinationUserName || '',
+      },
+      startDate: {
+        accessor: (r) => r.startDate,
+        type: 'date',
+      },
+      endDate: {
+        accessor: (r) => r.endDate,
+        type: 'date',
+      },
+    },
+  });
 
   const [usersSaida, setUsersSaida] = useState<User[]>([]);
   const [usersDestino, setUsersDestino] = useState<User[]>([]);
@@ -333,7 +338,7 @@ const ChatRedirectForm = () => {
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
       <Box sx={{ p: 3 }}>
         <Typography variant="h4" gutterBottom>
-          Painel de Redirecionamentos
+          Redirecionamentos
         </Typography>
         <Typography variant="subtitle1" color="text.secondary" gutterBottom>
           Gerencie os redirecionamentos de conversas entre usuários
@@ -434,10 +439,14 @@ const ChatRedirectForm = () => {
                       <TableCell>
                         <Chip
                           label={
-                            redirect.status === RedirectStatus.ACTIVE ? 'Ativo' : 'Agendado'
+                            redirect.status === RedirectStatus.ACTIVE
+                              ? 'Ativo'
+                              : 'Agendado'
                           }
                           color={
-                            redirect.status === RedirectStatus.ACTIVE ? 'success' : 'warning'
+                            redirect.status === RedirectStatus.ACTIVE
+                              ? 'success'
+                              : 'warning'
                           }
                           size="small"
                         />

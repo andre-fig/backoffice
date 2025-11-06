@@ -27,12 +27,12 @@ const Sidebar = () => {
         <List>
           <ListItem key="chat-redirect" disablePadding>
             <ListItemButton component={Link} to="/redirects/chats">
-              <ListItemText primary="Redirecionar de Conversas" />
+              <ListItemText primary="Redirecionamentos" />
             </ListItemButton>
           </ListItem>
           <ListItem key="meta-lines-export" disablePadding>
             <ListItemButton component={Link} to="/meta/lines/export">
-              <ListItemText primary="Exportar Linhas da Meta" />
+              <ListItemText primary="Gerenciamento de Linhas" />
             </ListItemButton>
           </ListItem>
         </List>

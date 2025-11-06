@@ -103,12 +103,14 @@ export class MetaSyncService {
         where: { waba: { id: waba.id } },
         select: ['externalId'],
       });
+
       const existingLineIds = new Set(existingLines.map((l) => l.externalId));
 
       for (const metaLine of metaLines) {
         await this.syncLine(
           waba.id,
           metaLine.id,
+          metaLine.status || '',
           existingLineIds.has(metaLine.id)
         );
       }
@@ -132,6 +134,7 @@ export class MetaSyncService {
   private async syncLine(
     wabaUuid: string,
     lineId: string,
+    lineStatus: string,
     exists: boolean
   ): Promise<void> {
     try {
@@ -146,7 +149,7 @@ export class MetaSyncService {
         displayPhoneNumber,
         normalizedPhoneNumber,
         verifiedName: details.verified_name || '',
-        status: '',
+        status: lineStatus,
         nameStatus: details.name_status || '',
         qualityRating: details.quality_rating || '',
         isOfficialBusinessAccount:

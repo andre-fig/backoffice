@@ -459,10 +459,10 @@ export default function MetaLinesExportPage() {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Exportar Linhas da Meta
+        Gerenciamento de Linhas
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        Visualize e exporte todas as linhas do WhatsApp Business
+        Gerencie e ative novas linhas WhatsApp Business
       </Typography>
 
       <Box sx={{ mt: 4 }}>

@@ -29,7 +29,25 @@ import {
   MetaLineRowDto,
   MetaLinesStreamEvent,
   WabaAnalyticsResponseDto,
+  LineNameStatus,
+  PricingCategory,
+  PricingType,
 } from '@backoffice-monorepo/shared-types';
+
+const normalizeNameStatus = (s?: string): LineNameStatus =>
+  Object.values(LineNameStatus).includes(s as LineNameStatus)
+    ? (s as LineNameStatus)
+    : LineNameStatus.UNKNOWN;
+
+const normalizePricingCategory = (c?: string): PricingCategory =>
+  Object.values(PricingCategory).includes(c as PricingCategory)
+    ? (c as PricingCategory)
+    : PricingCategory.UNKNOWN;
+
+const normalizePricingType = (t?: string): PricingType =>
+  Object.values(PricingType).includes(t as PricingType)
+    ? (t as PricingType)
+    : PricingType.UNKNOWN;
 
 type BackofficeWaba = {
   id: string;
@@ -286,6 +304,24 @@ export default function MetaLinesExportPage() {
     }
   };
 
+  const getNameStatusColor = (
+    status: LineNameStatus | string
+  ): 'default' | 'success' | 'warning' | 'error' | 'info' => {
+    const s = normalizeNameStatus(status);
+    switch (s) {
+      case LineNameStatus.APPROVED:
+        return 'success';
+      case LineNameStatus.AVAILABLE_WITHOUT_REVIEW:
+        return 'info';
+      case LineNameStatus.DECLINED:
+        return 'error';
+      case LineNameStatus.NON_EXISTS:
+        return 'warning';
+      default:
+        return 'default';
+    }
+  };
+
   const handleLineClick = (row: MetaLineRowDto) => {
     setSelectedLine(row);
     setAnalyticsDialogOpen(true);
@@ -328,27 +364,41 @@ export default function MetaLinesExportPage() {
   };
 
   const getCategoryColor = (
-    category: string
+    category: PricingCategory | string
   ): 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'info' => {
-    switch (category) {
-      case 'MARKETING':
+    const c = normalizePricingCategory(category);
+    switch (c) {
+      case PricingCategory.MARKETING:
         return 'primary';
-      case 'UTILITY':
+      case PricingCategory.MARKETING_LITE:
+        return 'secondary';
+      case PricingCategory.UTILITY:
         return 'info';
-      case 'SERVICE':
+      case PricingCategory.SERVICE:
         return 'success';
-      case 'AUTHENTICATION':
+      case PricingCategory.AUTHENTICATION:
         return 'warning';
       default:
         return 'default';
     }
   };
 
-  const getDirectionColor = (
-    direction: string
-  ): 'default' | 'primary' | 'secondary' => {
-    return direction === 'BUSINESS_INITIATED' ? 'primary' : 'secondary';
+  const getPricingTypeColor = (
+    type: PricingType | string
+  ): 'default' | 'primary' | 'secondary' | 'success' => {
+    const t = normalizePricingType(type);
+    switch (t) {
+      case PricingType.REGULAR:
+        return 'primary';
+      case PricingType.FREE_ENTRY_POINT:
+        return 'success';
+      case PricingType.FREE_CUSTOMER_SERVICE:
+        return 'secondary';
+      default:
+        return 'default';
+    }
   };
+
 
   const renderAnalyticsTable = () => {
     if (isLoadingAnalytics) {
@@ -370,7 +420,7 @@ export default function MetaLinesExportPage() {
     const analyticsRows: Array<{
       date: string;
       category: string;
-      direction: string;
+      pricingType: string;
       volume: number;
       cost: number;
     }> = [];
@@ -378,13 +428,13 @@ export default function MetaLinesExportPage() {
     Object.entries(analyticsData).forEach(([date, dateData]) => {
       Object.entries(dateData).forEach(([, lineData]) => {
         Object.entries(lineData).forEach(([category, categoryData]) => {
-          Object.entries(categoryData).forEach(([direction, directionData]) => {
+          Object.entries(categoryData).forEach(([pricingType, pricingTypeData]) => {
             analyticsRows.push({
               date,
               category,
-              direction,
-              volume: directionData.volume,
-              cost: directionData.cost,
+              pricingType,
+              volume: pricingTypeData.volume,
+              cost: pricingTypeData.cost,
             });
           });
         });
@@ -433,15 +483,15 @@ export default function MetaLinesExportPage() {
                   <TableCell>{row.date}</TableCell>
                   <TableCell>
                     <Chip
-                      label={row.category}
+                      label={row.category || 'unknown'}
                       color={getCategoryColor(row.category)}
                       size="small"
                     />
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={row.direction}
-                      color={getDirectionColor(row.direction)}
+                      label={row.pricingType || 'unknown'}
+                      color={getPricingTypeColor(row.pricingType)}
                       size="small"
                     />
                   </TableCell>
@@ -612,7 +662,13 @@ export default function MetaLinesExportPage() {
                     <TableCell>{row.wabaId}</TableCell>
                     <TableCell>{row.wabaName}</TableCell>
                     <TableCell>{row.name}</TableCell>
-                    <TableCell>{row.nameStatus}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={row.nameStatus || 'unknown'}
+                        color={getNameStatusColor(row.nameStatus)}
+                        size="small"
+                      />
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={row.active}

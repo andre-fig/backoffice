@@ -5,6 +5,7 @@ import { MetaLineRowDto } from '@backoffice-monorepo/shared-types';
 export class CsvExportService {
   private readonly headers = [
     'ID',
+    'ID Externo',
     'Linha',
     'idWaba',
     'Waba',
@@ -23,6 +24,7 @@ export class CsvExportService {
       csvLines.push(
         [
           this.escapeCsv(row.id),
+          this.escapeCsv(row.externalId),
           this.escapeCsv((row.line.match(/\d+/g) || []).join('')),
           this.escapeCsv(row.wabaId),
           this.escapeCsv(row.wabaName),

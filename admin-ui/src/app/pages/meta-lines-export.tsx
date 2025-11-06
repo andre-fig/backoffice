@@ -40,6 +40,7 @@ type BackofficeWaba = {
 
 type SortableColumn =
   | 'id'
+  | 'externalId'
   | 'line'
   | 'wabaId'
   | 'wabaName'
@@ -79,6 +80,9 @@ export default function MetaLinesExportPage() {
     columns: {
       id: {
         accessor: (r) => r.id,
+      },
+      externalId: {
+        accessor: (r) => r.externalId,
       },
       line: {
         accessor: (r) => r.line,
@@ -506,6 +510,15 @@ export default function MetaLinesExportPage() {
                 </TableCell>
                 <TableCell>
                   <TableSortLabel
+                    active={sortBy === 'externalId'}
+                    direction={sortBy === 'externalId' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('externalId')}
+                  >
+                    ID Externo
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
                     active={sortBy === 'line'}
                     direction={sortBy === 'line' ? sortOrder : 'asc'}
                     onClick={() => handleSort('line')}
@@ -594,6 +607,7 @@ export default function MetaLinesExportPage() {
                     sx={{ cursor: 'pointer' }}
                   >
                     <TableCell>{row.id}</TableCell>
+                    <TableCell>{row.externalId}</TableCell>
                     <TableCell>{row.line}</TableCell>
                     <TableCell>{row.wabaId}</TableCell>
                     <TableCell>{row.wabaName}</TableCell>

@@ -12,23 +12,12 @@ export interface GetWabaAnalyticsQueryDto {
   endDate?: string;
 }
 
-export interface DirectionData {
+export interface WabaAnalyticsResponseDto {
+  id: string;
+  lineId: string;
+  date: string;
+  pricingCategory: string;
+  pricingType: string;
   volume: number;
   cost: number;
-}
-
-export interface CategoryData {
-  [direction: string]: DirectionData;
-}
-
-export interface LineData {
-  [category: string]: CategoryData;
-}
-
-export interface DateData {
-  [phoneNumber: string]: LineData;
-}
-
-export interface WabaAnalyticsResponseDto {
-  [date: string]: DateData;
 }

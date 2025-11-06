@@ -28,10 +28,10 @@ import { useSortable } from '../hooks/useSortable';
 import {
   MetaLineRowDto,
   MetaLinesStreamEvent,
-  WabaAnalyticsResponseDto,
   LineNameStatus,
   PricingCategory,
   PricingType,
+  WabaAnalyticsResponseDto,
 } from '@backoffice-monorepo/shared-types';
 
 const normalizeNameStatus = (s?: string): LineNameStatus =>
@@ -424,23 +424,15 @@ export default function MetaLinesExportPage() {
       cost: number;
     }> = [];
 
-    Object.entries(analyticsData).forEach(([date, dateData]) => {
-      Object.entries(dateData).forEach(([, lineData]) => {
-        Object.entries(lineData).forEach(([category, categoryData]) => {
-          Object.entries(categoryData).forEach(
-            ([pricingType, pricingTypeData]) => {
-              analyticsRows.push({
-                date,
-                category,
-                pricingType,
-                volume: pricingTypeData.volume,
-                cost: pricingTypeData.cost,
-              });
-            }
-          );
-        });
+    for (const dataPoint of Object.values(analyticsData)) {
+      analyticsRows.push({
+        date: dataPoint.date,
+        category: dataPoint.pricingCategory,
+        pricingType: dataPoint.pricingType,
+        volume: dataPoint.volume,
+        cost: dataPoint.cost,
       });
-    });
+    }
 
     const totalConversations = analyticsRows.reduce(
       (sum, row) => sum + row.volume,

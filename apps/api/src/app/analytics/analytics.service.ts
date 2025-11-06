@@ -1,15 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AnalyticsEntity } from '../../database/db-backoffice/entities/analytics.entity';
 import { LineEntity } from '../../database/db-backoffice/entities/line.entity';
 import { WabasService } from '../wabas/wabas.service';
 import { Datasources } from '../../common/datasources.enum';
-import {
-  PricingDataPoint,
-  WabaAnalyticsResponseDto,
-} from '@backoffice-monorepo/shared-types';
+import { startOfDay, endOfDay, parseISO } from 'date-fns';
+import { PricingDataPoint } from '@backoffice-monorepo/shared-types';
 import { MetaService } from '../meta/meta.service';
 
 @Injectable()
@@ -196,78 +194,20 @@ export class AnalyticsService {
     }
   }
 
-  async getWabaAnalytics(
-    wabaId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<WabaAnalyticsResponseDto> {
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-
-    const start = startDate ? new Date(startDate + 'T00:00:00.000Z') : today;
-    const end = endDate ? new Date(endDate + 'T23:59:59.999Z') : today;
-
-    const analytics = await this.analyticsRepository
-      .createQueryBuilder('analytics')
-      .leftJoinAndSelect('analytics.line', 'line')
-      .leftJoinAndSelect('line.waba', 'waba')
-      .where('waba.externalId = :wabaId', { wabaId })
-      .andWhere('analytics.date BETWEEN :start AND :end', { start, end })
-      .getMany();
-
-    return this.transformAnalyticsData(analytics);
-  }
-
   async getLineAnalytics(
     lineId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<WabaAnalyticsResponseDto> {
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+    start?: string,
+    end?: string
+  ): Promise<AnalyticsEntity[]> {
+    const startDate = start ? startOfDay(parseISO(start)) : undefined;
+    const endDate = end ? endOfDay(parseISO(end)) : undefined;
 
-    const start = startDate ? new Date(startDate + 'T00:00:00.000Z') : today;
-    const end = endDate ? new Date(endDate + 'T23:59:59.999Z') : today;
-
-    const analytics = await this.analyticsRepository
-      .createQueryBuilder('analytics')
-      .leftJoinAndSelect('analytics.line', 'line')
-      .where('analytics.lineId = :lineId', { lineId })
-      .andWhere('analytics.date BETWEEN :start AND :end', { start, end })
-      .getMany();
-
-    return this.transformAnalyticsData(analytics);
-  }
-
-  private transformAnalyticsData(
-    analytics: AnalyticsEntity[]
-  ): WabaAnalyticsResponseDto {
-    const result: WabaAnalyticsResponseDto = {};
-
-    for (const item of analytics) {
-      const dateStr = item.date as unknown as string;
-      const phoneNumber = item.line.displayPhoneNumber;
-      const pricingCategory = item.pricingCategory;
-      const pricingType = item.pricingType;
-
-      if (!result[dateStr]) {
-        result[dateStr] = {};
-      }
-
-      if (!result[dateStr][phoneNumber]) {
-        result[dateStr][phoneNumber] = {};
-      }
-
-      if (!result[dateStr][phoneNumber][pricingCategory]) {
-        result[dateStr][phoneNumber][pricingCategory] = {};
-      }
-
-      result[dateStr][phoneNumber][pricingCategory][pricingType] = {
-        volume: item.volume,
-        cost: Number(item.cost),
-      };
-    }
-
-    return result;
+    return await this.analyticsRepository.find({
+      where: {
+        lineId,
+        date: startDate && endDate ? Between(startDate, endDate) : undefined,
+      },
+      relations: ['line'],
+    });
   }
 }

@@ -50,7 +50,7 @@ export class AnalyticsService {
 
   async collectAnalyticsForWaba(wabaId: string): Promise<void> {
     this.logger.log(
-      `Starting analytics collection for WABA ${wabaId} (yesterday and today).`
+      `Starting analytics collection for WABA ${wabaId} (last 7 days).`
     );
 
     try {
@@ -59,37 +59,22 @@ export class AnalyticsService {
       const monthUTC = now.getUTCMonth();
       const dayUTC = now.getUTCDate();
 
-      const yesterdayStart = new Date(
-        Date.UTC(yearUTC, monthUTC, dayUTC - 1, 0, 0, 0, 0)
-      );
-      const yesterdayEnd = new Date(
-        Date.UTC(yearUTC, monthUTC, dayUTC - 1, 23, 59, 59, 999)
-      );
-      const todayStart = new Date(
-        Date.UTC(yearUTC, monthUTC, dayUTC, 0, 0, 0, 0)
-      );
-      const todayEnd = new Date(
-        Date.UTC(yearUTC, monthUTC, dayUTC, 23, 59, 59, 999)
-      );
+      const promises = [];
 
-      const results = await Promise.allSettled([
-        this.fetchAndSaveAnalyticsForRange(
-          wabaId,
-          yesterdayStart,
-          yesterdayEnd
-        ),
-        this.fetchAndSaveAnalyticsForRange(wabaId, todayStart, todayEnd),
-      ]);
+      for (let i = 0; i < 7; i++) {
+        const dayStart = new Date(
+          Date.UTC(yearUTC, monthUTC, dayUTC - i, 0, 0, 0, 0)
+        );
+        const dayEnd = new Date(
+          Date.UTC(yearUTC, monthUTC, dayUTC - i, 23, 59, 59, 999)
+        );
 
-      for (const [index, result] of results.entries()) {
-        if (result.status === 'rejected') {
-          const day = index === 0 ? 'yesterday' : 'today';
-          this.logger.error(
-            `Failed to process analytics for ${day} for WABA ${wabaId}`,
-            result.reason
-          );
-        }
+        promises.push(
+          this.fetchAndSaveAnalyticsForRange(wabaId, dayStart, dayEnd)
+        );
       }
+
+      await Promise.allSettled(promises);
 
       this.logger.log(
         `Completed analytics collection cycle for WABA ${wabaId}.`
@@ -260,7 +245,7 @@ export class AnalyticsService {
     const result: WabaAnalyticsResponseDto = {};
 
     for (const item of analytics) {
-      const dateStr = item.date.toISOString().split('T')[0];
+      const dateStr = item.date as unknown as string;
       const phoneNumber = item.line.displayPhoneNumber;
       const pricingCategory = item.pricingCategory;
       const pricingType = item.pricingType;

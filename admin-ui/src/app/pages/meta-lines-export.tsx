@@ -321,9 +321,9 @@ export default function MetaLinesExportPage() {
   }, [analyticsDialogOpen, selectedLine, analyticsStartDate, analyticsEndDate]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'BRL',
+      currency: 'USD',
     }).format(value);
   };
 
@@ -371,7 +371,7 @@ export default function MetaLinesExportPage() {
       date: string;
       category: string;
       direction: string;
-      conversations: number;
+      volume: number;
       cost: number;
     }> = [];
 
@@ -383,7 +383,7 @@ export default function MetaLinesExportPage() {
               date,
               category,
               direction,
-              conversations: directionData.conversations,
+              volume: directionData.volume,
               cost: directionData.cost,
             });
           });
@@ -392,7 +392,7 @@ export default function MetaLinesExportPage() {
     });
 
     const totalConversations = analyticsRows.reduce(
-      (sum, row) => sum + row.conversations,
+      (sum, row) => sum + row.volume,
       0
     );
     const totalCost = analyticsRows.reduce((sum, row) => sum + row.cost, 0);
@@ -402,10 +402,10 @@ export default function MetaLinesExportPage() {
         <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
           <Paper sx={{ flex: 1, p: 2 }}>
             <Typography color="text.secondary" variant="body2">
-              Total de Conversas
+              Volume Total
             </Typography>
             <Typography variant="h5">
-              {totalConversations.toLocaleString('pt-BR')}
+              {totalConversations?.toLocaleString('pt-BR')}
             </Typography>
           </Paper>
           <Paper sx={{ flex: 1, p: 2 }}>
@@ -422,8 +422,8 @@ export default function MetaLinesExportPage() {
               <TableRow>
                 <TableCell>Data</TableCell>
                 <TableCell>Categoria</TableCell>
-                <TableCell>Direção</TableCell>
-                <TableCell align="right">Conversas</TableCell>
+                <TableCell>Tipo</TableCell>
+                <TableCell align="right">Volume</TableCell>
                 <TableCell align="right">Custo</TableCell>
               </TableRow>
             </TableHead>
@@ -446,7 +446,7 @@ export default function MetaLinesExportPage() {
                     />
                   </TableCell>
                   <TableCell align="right">
-                    {row.conversations.toLocaleString('pt-BR')}
+                    {row.volume?.toLocaleString('pt-BR')}
                   </TableCell>
                   <TableCell align="right">
                     {formatCurrency(row.cost)}

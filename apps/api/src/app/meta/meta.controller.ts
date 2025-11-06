@@ -12,7 +12,6 @@ import {
 import { Response } from 'express';
 import { Observable } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
-import { MetaService } from './meta.service';
 import { MetaLinesService } from './services/meta-lines.service';
 import { CsvExportService } from './services/csv-export.service';
 import { MetaSyncService } from './services/meta-sync.service';
@@ -25,7 +24,6 @@ import {
 @Controller('meta')
 export class MetaController {
   constructor(
-    private readonly metaService: MetaService,
     private readonly metaLinesService: MetaLinesService,
     private readonly csvExportService: CsvExportService,
     private readonly metaSyncService: MetaSyncService

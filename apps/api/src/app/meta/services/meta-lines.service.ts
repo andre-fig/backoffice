@@ -10,7 +10,6 @@ import {
   concatMap,
   mergeMap,
   tap,
-  filter,
 } from 'rxjs';
 import { WabasService } from '../../im-wabas/wabas.service';
 import { MetaSyncService } from './meta-sync.service';

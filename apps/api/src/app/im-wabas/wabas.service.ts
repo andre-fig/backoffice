@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WabaEntity } from '../../database/db-backoffice/entities/waba.entity';
@@ -29,19 +24,6 @@ export class WabasService {
     return await this.wabaRepository.findOne({
       where: { externalId: wabaId },
     });
-  }
-
-  async remove(wabaId: string): Promise<void> {
-    const entity = await this.wabaRepository.findOne({
-      where: { externalId: wabaId },
-    });
-
-    if (!entity) {
-      throw new NotFoundException(`WABA com ID ${wabaId} não encontrado`);
-    }
-
-    await this.wabaRepository.remove(entity);
-    this.logger.log(`WABA ${wabaId} removido com sucesso`);
   }
 
   async getAllWabaIds(): Promise<string[]> {

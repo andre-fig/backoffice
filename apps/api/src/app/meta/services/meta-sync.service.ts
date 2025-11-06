@@ -167,13 +167,6 @@ export class MetaSyncService {
     }
   }
 
-  async getVisibleWabas(): Promise<WabaEntity[]> {
-    return this.wabaRepository.find({
-      where: { isVisible: true },
-      order: { createdAt: 'DESC' },
-    });
-  }
-
   async getAllWabas(): Promise<WabaEntity[]> {
     return this.wabaRepository.find({
       order: { createdAt: 'DESC' },
@@ -185,21 +178,5 @@ export class MetaSyncService {
       where: { waba: { externalId: wabaId } },
       order: { createdAt: 'DESC' },
     });
-  }
-
-  async getAllVisibleLines(): Promise<LineEntity[]> {
-    const visibleWabas = await this.getVisibleWabas();
-    const visibleWabaUuids = visibleWabas.map((w) => w.id);
-
-    if (visibleWabaUuids.length === 0) {
-      return [];
-    }
-
-    return this.lineRepository
-      .createQueryBuilder('line')
-      .leftJoinAndSelect('line.waba', 'waba')
-      .where('waba.id IN (:...wabaIds)', { wabaIds: visibleWabaUuids })
-      .orderBy('line.createdAt', 'DESC')
-      .getMany();
   }
 }

@@ -286,6 +286,23 @@ export default function MetaLinesExportPage() {
     }
   };
 
+  const getNameStatusColor = (
+    status: string
+  ): 'default' | 'success' | 'warning' | 'error' | 'info' => {
+    switch (status) {
+      case 'APPROVED':
+        return 'success';
+      case 'AVAILABLE_WITHOUT_REVIEW':
+        return 'info';
+      case 'DECLINED':
+        return 'error';
+      case 'NON_EXISTS':
+        return 'warning';
+      default:
+        return 'default';
+    }
+  };
+
   const handleLineClick = (row: MetaLineRowDto) => {
     setSelectedLine(row);
     setAnalyticsDialogOpen(true);
@@ -333,6 +350,8 @@ export default function MetaLinesExportPage() {
     switch (category) {
       case 'MARKETING':
         return 'primary';
+      case 'MARKETING_LITE':
+        return 'secondary';
       case 'UTILITY':
         return 'info';
       case 'SERVICE':
@@ -344,11 +363,21 @@ export default function MetaLinesExportPage() {
     }
   };
 
-  const getDirectionColor = (
-    direction: string
-  ): 'default' | 'primary' | 'secondary' => {
-    return direction === 'BUSINESS_INITIATED' ? 'primary' : 'secondary';
+  const getPricingTypeColor = (
+    type: string
+  ): 'default' | 'primary' | 'secondary' | 'success' => {
+    switch (type) {
+      case 'REGULAR':
+        return 'primary';
+      case 'FREE_ENTRY_POINT':
+        return 'success';
+      case 'FREE_CUSTOMER_SERVICE':
+        return 'secondary';
+      default:
+        return 'default';
+    }
   };
+
 
   const renderAnalyticsTable = () => {
     if (isLoadingAnalytics) {
@@ -433,15 +462,15 @@ export default function MetaLinesExportPage() {
                   <TableCell>{row.date}</TableCell>
                   <TableCell>
                     <Chip
-                      label={row.category}
+                      label={row.category || 'unknown'}
                       color={getCategoryColor(row.category)}
                       size="small"
                     />
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={row.direction}
-                      color={getDirectionColor(row.direction)}
+                      label={row.direction || 'unknown'}
+                      color={getPricingTypeColor(row.direction)}
                       size="small"
                     />
                   </TableCell>
@@ -612,7 +641,13 @@ export default function MetaLinesExportPage() {
                     <TableCell>{row.wabaId}</TableCell>
                     <TableCell>{row.wabaName}</TableCell>
                     <TableCell>{row.name}</TableCell>
-                    <TableCell>{row.nameStatus}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={row.nameStatus || 'unknown'}
+                        color={getNameStatusColor(row.nameStatus)}
+                        size="small"
+                      />
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={row.active}

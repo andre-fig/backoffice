@@ -9,11 +9,11 @@ services:
       POSTGRES_PASSWORD: ${DB_BACKOFFICE_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_BACKOFFICE_DATABASE:-backoffice_db}
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres-backoffice-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,9 +22,38 @@ services:
     image: adminer:latest
     container_name: backoffice-adminer
     ports:
-      - "8080:8080"
+      - '8080:8080'
     depends_on:
       - postgres-backoffice
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: backoffice-api
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_BACKOFFICE_HOST: postgres-backoffice
+      DB_BACKOFFICE_PORT: 5432
+      DB_BACKOFFICE_SSL: 'false'
+    env_file:
+      - ./apps/api/.env
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres-backoffice:
+        condition: service_healthy
+
+  admin-ui:
+    build:
+      context: .
+      dockerfile: admin-ui/Dockerfile
+    container_name: backoffice-admin-ui
+    ports:
+      - '5173:80'
+    depends_on:
+      - api
 
 volumes:
   postgres-backoffice-data:

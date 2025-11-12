@@ -37,7 +37,7 @@ type TemplateRow = {
 
 type TemplateAnalyticsRow = {
   id: string;
-  templateId: string;
+  externalId: string;
   date: string;
   granularity: string;
   sent: number;
@@ -72,7 +72,9 @@ export default function MetaTemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateRow | null>(
     null
   );
-  const [analyticsRows, setAnalyticsRows] = useState<TemplateAnalyticsRow[]>([]);
+  const [analyticsRows, setAnalyticsRows] = useState<TemplateAnalyticsRow[]>(
+    []
+  );
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [{ start: defaultStart, end: defaultEnd }] = useState(
     buildDefaultDates()
@@ -88,13 +90,8 @@ export default function MetaTemplatesPage() {
 
   useEffect(() => {
     if (selectedTemplate) {
-      fetchAnalytics(
-        selectedTemplate.id,
-        analyticsStartDate,
-        analyticsEndDate
-      );
+      fetchAnalytics(selectedTemplate.id, analyticsStartDate, analyticsEndDate);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTemplate]);
 
   const loadTemplates = async () => {
@@ -114,7 +111,7 @@ export default function MetaTemplatesPage() {
   };
 
   const fetchAnalytics = async (
-    templateId: string,
+    externalId: string,
     start?: string,
     end?: string
   ) => {
@@ -127,7 +124,7 @@ export default function MetaTemplatesPage() {
       }
       const query = params.toString();
       const response = await fetch(
-        `/api/templates/${templateId}/analytics${query ? `?${query}` : ''}`
+        `/api/templates/${externalId}/analytics${query ? `?${query}` : ''}`
       );
       if (!response.ok) {
         throw new Error('Falha ao carregar analytics do template');
@@ -188,8 +185,7 @@ export default function MetaTemplatesPage() {
         </Typography>
         <Typography variant="body2" color="text.secondary">
           Sincronizados automaticamente a cada hora para todos os WABAs
-          visíveis. Clique em um template para visualizar os analytics
-          diários.
+          visíveis. Clique em um template para visualizar os analytics diários.
         </Typography>
       </Box>
 
@@ -266,8 +262,7 @@ export default function MetaTemplatesPage() {
         onClose={handleDialogClose}
       >
         <DialogTitle>
-          Analytics do template{' '}
-          <strong>{selectedTemplate?.name ?? '—'}</strong>
+          Analytics do template <strong>{selectedTemplate?.name ?? '—'}</strong>
         </DialogTitle>
         <DialogContent dividers>
           {selectedTemplate && (
@@ -301,11 +296,7 @@ export default function MetaTemplatesPage() {
           {analyticsLoading && <LinearProgress />}
 
           {!analyticsLoading && analyticsRows.length === 0 && (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 2 }}
-            >
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
               Nenhum dado disponível para o período selecionado.
             </Typography>
           )}

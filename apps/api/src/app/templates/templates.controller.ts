@@ -10,12 +10,12 @@ export class TemplatesController {
     return this.templatesService.listTemplates(wabaExternalId);
   }
 
-  @Get(':templateId/analytics')
+  @Get(':externalIds/analytics')
   async getTemplateAnalytics(
-    @Param('templateId') templateId: string,
+    @Param('externalIds') externalIds: string,
     @Query('start') start?: string,
     @Query('end') end?: string
   ) {
-    return this.templatesService.getTemplateAnalytics(templateId, start, end);
+    return this.templatesService.getTemplateAnalytics(externalIds, start, end);
   }
 }

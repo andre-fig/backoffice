@@ -11,13 +11,12 @@ import {
 import { TemplateEntity } from './template.entity';
 
 @Entity('template_analytics')
-@Index(['templateId', 'date'], { unique: true })
+@Index('IDX_template_analytics_template_date', ['template', 'date'], {
+  unique: true,
+})
 export class TemplateAnalyticsEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
-  @Column('uuid', { name: 'template_id' })
-  templateId: string;
 
   @Column('date', { name: 'date' })
   date: Date;

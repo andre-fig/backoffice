@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { lastValueFrom } from 'rxjs';
 import {
   Waba,
@@ -69,7 +69,7 @@ export class MetaService {
       return response.data;
     } catch (error) {
       throw new InternalServerErrorException(
-        `Falha ao comunicar com a API da Meta: ${(error as AxiosError).message}`
+        `Falha inesperada na requisição: ${(error as Error).message}`
       );
     }
   }
@@ -153,21 +153,18 @@ export class MetaService {
   }
 
   async listTemplates(wabaId: string): Promise<MetaTemplate[]> {
-    return this.requestAllPages<MetaTemplate>(
-      `/${wabaId}/message_templates`,
-      {
-        fields: 'id,name,status,language,category',
-      }
-    );
+    return this.requestAllPages<MetaTemplate>(`/${wabaId}/message_templates`, {
+      fields: 'id,name,status,language,category',
+    });
   }
 
   async getTemplateAnalytics(
     wabaId: string,
-    templateIds: string[],
+    externalIds: string[],
     startDate: Date,
     endDate: Date
   ): Promise<TemplateAnalyticsResponse> {
-    if (!templateIds.length) {
+    if (!externalIds.length) {
       return { data: [] };
     }
 
@@ -177,7 +174,7 @@ export class MetaService {
         start: this.formatDate(startDate),
         end: this.formatDate(endDate),
         granularity: 'DAILY',
-        template_ids: JSON.stringify(templateIds),
+        template_ids: JSON.stringify(externalIds),
         metric_types: JSON.stringify(['SENT', 'DELIVERED', 'READ', 'COST']),
         use_waba_timezone: true,
       }

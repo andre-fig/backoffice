@@ -13,13 +13,10 @@ import { WabaEntity } from './waba.entity';
 import { TemplateAnalyticsEntity } from './template-analytics.entity';
 
 @Entity('templates')
-@Index(['wabaId', 'externalId'], { unique: true })
+@Index('IDX_templates_waba_external', ['waba', 'externalId'], { unique: true })
 export class TemplateEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
-  @Column('uuid', { name: 'waba_id' })
-  wabaId: string;
 
   @Column('text', { name: 'external_id' })
   externalId: string;

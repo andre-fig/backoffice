@@ -4,6 +4,7 @@ import { Between, FindOptionsWhere, Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { TemplateEntity } from '../../database/db-backoffice/entities/template.entity';
 import { TemplateAnalyticsEntity } from '../../database/db-backoffice/entities/template-analytics.entity';
+import { WabaEntity } from '../../database/db-backoffice/entities/waba.entity';
 import { Datasources } from '../../common/datasources.enum';
 import { WabasService } from '../wabas/wabas.service';
 import { MetaService } from '../meta/meta.service';
@@ -17,7 +18,7 @@ import { parseISO, startOfDay, endOfDay } from 'date-fns';
 @Injectable()
 export class TemplatesService {
   private readonly logger = new Logger(TemplatesService.name);
-  private readonly analyticsChunkSize = 20;
+  private readonly analyticsChunkSize = 10;
   private templatesSyncInProgress = false;
   private analyticsSyncInProgress = false;
 
@@ -30,7 +31,7 @@ export class TemplatesService {
     private readonly metaService: MetaService
   ) {}
 
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async syncTemplatesCron(): Promise<void> {
     if (this.templatesSyncInProgress) {
       this.logger.warn('Template sync already running, skipping this cycle');
@@ -51,9 +52,7 @@ export class TemplatesService {
     }
   }
 
-  private async syncTemplatesForWaba(
-    wabaExternalId: string
-  ): Promise<void> {
+  private async syncTemplatesForWaba(wabaExternalId: string): Promise<void> {
     const waba = await this.wabasService.findOne(wabaExternalId);
 
     if (!waba) {
@@ -87,7 +86,7 @@ export class TemplatesService {
         return;
       }
 
-      await this.templateRepository.upsert(payload, ['wabaId', 'externalId']);
+      await this.templateRepository.upsert(payload, ['waba', 'externalId']);
       this.logger.log(
         `Synchronized ${payload.length} templates for WABA ${wabaExternalId}`
       );
@@ -109,17 +108,16 @@ export class TemplatesService {
     }
 
     return {
-      wabaId: wabaUuid,
+      waba: { id: wabaUuid } as WabaEntity,
       externalId,
       name: template.name,
       language: template.language,
       status: template.status ?? null,
       category: template.category ?? null,
-      updatedAt: new Date(),
     };
   }
 
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async syncTemplateAnalyticsCron(): Promise<void> {
     if (this.analyticsSyncInProgress) {
       this.logger.warn(
@@ -164,7 +162,7 @@ export class TemplatesService {
 
     const templates = await this.templateRepository.find({
       select: ['id', 'externalId'],
-      where: { wabaId: waba.id },
+      where: { waba: { id: waba.id } },
     });
 
     if (!templates.length) {
@@ -178,20 +176,19 @@ export class TemplatesService {
       templates.map((template) => [template.externalId, template])
     );
 
-    const templateIdBatches = this.chunkArray(
+    const externalIdBatches = this.chunkArray(
       templates.map((template) => template.externalId),
       this.analyticsChunkSize
     );
 
-    for (const batch of templateIdBatches) {
+    for (const batch of externalIdBatches) {
       try {
-        const analyticsResponse =
-          await this.metaService.getTemplateAnalytics(
-            wabaExternalId,
-            batch,
-            startDate,
-            endDate
-          );
+        const analyticsResponse = await this.metaService.getTemplateAnalytics(
+          wabaExternalId,
+          batch,
+          startDate,
+          endDate
+        );
 
         const datasets = analyticsResponse?.data ?? [];
 
@@ -216,7 +213,7 @@ export class TemplatesService {
           }
 
           await this.templateAnalyticsRepository.upsert(payload, [
-            'templateId',
+            'template',
             'date',
           ]);
         }
@@ -231,10 +228,7 @@ export class TemplatesService {
 
   private mapAnalyticsDataPoint(
     dataPoint: TemplateAnalyticsDataPoint,
-    templateLookup: Map<
-      string,
-      Pick<TemplateEntity, 'id' | 'externalId'>
-    >,
+    templateLookup: Map<string, Pick<TemplateEntity, 'id' | 'externalId'>>,
     granularity: string
   ): Partial<TemplateAnalyticsEntity> | null {
     const template = templateLookup.get(dataPoint.template_id);
@@ -244,12 +238,11 @@ export class TemplatesService {
     }
 
     const date = this.normalizeDateFromTimestamp(dataPoint.start);
-    const { amountSpent, costPerDelivered } = this.extractCosts(
-      dataPoint.cost
-    );
+    const { amountSpent, costPerDelivered } = this.extractCosts(dataPoint.cost);
 
     return {
-      templateId: template.id,
+      // set relation by id reference
+      template: { id: template.id } as unknown as TemplateEntity,
       date,
       granularity,
       sent: dataPoint.sent ?? 0,
@@ -261,9 +254,10 @@ export class TemplatesService {
     };
   }
 
-  private extractCosts(
-    costEntries?: TemplateAnalyticsCostEntry[]
-  ): { amountSpent: number; costPerDelivered: number } {
+  private extractCosts(costEntries?: TemplateAnalyticsCostEntry[]): {
+    amountSpent: number;
+    costPerDelivered: number;
+  } {
     let amountSpent = 0;
     let costPerDelivered = 0;
 
@@ -312,10 +306,13 @@ export class TemplatesService {
 
     if (wabaExternalId) {
       const waba = await this.wabasService.findOne(wabaExternalId);
+
       if (!waba) {
         return [];
       }
-      whereClause = { wabaId: waba.id };
+      whereClause = {
+        waba: { id: waba.id },
+      } as unknown as FindOptionsWhere<TemplateEntity>;
     }
 
     return this.templateRepository.find({
@@ -326,12 +323,12 @@ export class TemplatesService {
   }
 
   async getTemplateAnalytics(
-    templateId: string,
+    externalId: string,
     start?: string,
     end?: string
   ): Promise<TemplateAnalyticsEntity[]> {
     const whereClause: FindOptionsWhere<TemplateAnalyticsEntity> = {
-      templateId,
+      template: { externalId } as unknown as TemplateEntity,
     };
 
     if (start && end) {
@@ -342,6 +339,7 @@ export class TemplatesService {
 
     return this.templateAnalyticsRepository.find({
       where: whereClause,
+      relations: ['template'],
       order: { date: 'DESC' },
     });
   }

@@ -4,6 +4,8 @@ import { WabaEntity } from './entities/waba.entity';
 import { LineEntity } from './entities/line.entity';
 import { AnalyticsEntity } from './entities/analytics.entity';
 import { ScheduledRedirectEntity } from './entities/scheduled-redirect.entity';
+import { TemplateEntity } from './entities/template.entity';
+import { TemplateAnalyticsEntity } from './entities/template-analytics.entity';
 
 config({ path: 'apps/api/.env' });
 
@@ -22,6 +24,8 @@ export const AppDataSource = new DataSource({
     LineEntity,
     AnalyticsEntity,
     ScheduledRedirectEntity,
+    TemplateEntity,
+    TemplateAnalyticsEntity,
   ],
   migrations: ['apps/api/src/database/db-backoffice/migrations/*.ts'],
   synchronize: false,

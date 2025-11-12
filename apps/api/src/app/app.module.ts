@@ -15,12 +15,15 @@ import { ScheduledRedirectEntity } from '../database/db-backoffice/entities/sche
 import { WabaEntity } from '../database/db-backoffice/entities/waba.entity';
 import { LineEntity } from '../database/db-backoffice/entities/line.entity';
 import { AnalyticsEntity } from '../database/db-backoffice/entities/analytics.entity';
+import { TemplateEntity } from '../database/db-backoffice/entities/template.entity';
+import { TemplateAnalyticsEntity } from '../database/db-backoffice/entities/template-analytics.entity';
 import { Datasources } from '../common/datasources.enum';
 import { VdiModule } from './vdi/vdi.module';
 import { AuthModule } from './auth/auth.module';
 import { MetaModule } from './meta/meta.module';
 import { WabasModule } from './wabas/wabas.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { TemplatesModule } from './templates/templates.module';
 
 @Module({
   imports: [
@@ -95,6 +98,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
             WabaEntity,
             LineEntity,
             AnalyticsEntity,
+            TemplateEntity,
+            TemplateAnalyticsEntity,
           ],
           synchronize: false,
           ssl: useSsl,
@@ -116,6 +121,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     MetaModule,
     WabasModule,
     AnalyticsModule,
+    TemplatesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

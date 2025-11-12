@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import ChatRedirectForm from './pages/chat-redirect';
 import MetaLinesExportPage from './pages/meta-lines-export';
 import NxWelcome from './nx-welcome';
+import MetaTemplatesPage from './pages/meta-templates';
 
 export function App() {
   return (
@@ -26,6 +27,7 @@ export function App() {
             <Route path="/" element={<NxWelcome title="admin-ui" />} />
             <Route path="/redirects/chats" element={<ChatRedirectForm />} />
             <Route path="/meta/lines/export" element={<MetaLinesExportPage />} />
+            <Route path="/meta/templates" element={<MetaTemplatesPage />} />
           </Routes>
         </Box>
       </Box>

@@ -8,6 +8,7 @@ import {
   Index,
 } from 'typeorm';
 import { LineEntity } from './line.entity';
+import { TemplateEntity } from './template.entity';
 
 @Entity('wabas')
 @Index(['externalId'], { unique: true })
@@ -32,4 +33,7 @@ export class WabaEntity {
 
   @OneToMany(() => LineEntity, (line) => line.waba)
   lines: LineEntity[];
+
+  @OneToMany(() => TemplateEntity, (template) => template.waba)
+  templates: TemplateEntity[];
 }

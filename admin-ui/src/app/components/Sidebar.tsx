@@ -34,6 +34,11 @@ const Sidebar = () => {
               <ListItemText primary="Gerenciamento de Linhas" />
             </ListItemButton>
           </ListItem>
+          <ListItem key="meta-templates" disablePadding>
+            <ListItemButton component={Link} to="/meta/templates">
+              <ListItemText primary="Templates" />
+            </ListItemButton>
+          </ListItem>
         </List>
       </Box>
     </Drawer>

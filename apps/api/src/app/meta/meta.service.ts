@@ -13,6 +13,8 @@ import {
   PhoneNumberDetails,
   MethodsEnum,
   PricingAnalyticsResponse,
+  MetaTemplate,
+  TemplateAnalyticsResponse,
 } from '@backoffice-monorepo/shared-types';
 
 interface GraphApiResponse<T> {
@@ -26,7 +28,7 @@ interface GraphApiResponse<T> {
   };
 }
 
-type QueryParams = Record<string, string | number | undefined>;
+type QueryParams = Record<string, string | number | boolean | undefined>;
 
 @Injectable()
 export class MetaService {
@@ -70,6 +72,10 @@ export class MetaService {
         `Falha ao comunicar com a API da Meta: ${(error as AxiosError).message}`
       );
     }
+  }
+
+  private formatDate(date: Date): string {
+    return date.toISOString().split('T')[0];
   }
 
   private async requestAllPages<T>(
@@ -144,5 +150,37 @@ export class MetaService {
         `.granularity(DAILY)` +
         `.dimensions(PHONE,PRICING_CATEGORY,PRICING_TYPE)`,
     });
+  }
+
+  async listTemplates(wabaId: string): Promise<MetaTemplate[]> {
+    return this.requestAllPages<MetaTemplate>(
+      `/${wabaId}/message_templates`,
+      {
+        fields: 'id,name,status,language,category',
+      }
+    );
+  }
+
+  async getTemplateAnalytics(
+    wabaId: string,
+    templateIds: string[],
+    startDate: Date,
+    endDate: Date
+  ): Promise<TemplateAnalyticsResponse> {
+    if (!templateIds.length) {
+      return { data: [] };
+    }
+
+    return this.request<TemplateAnalyticsResponse>(
+      `/${wabaId}/template_analytics`,
+      {
+        start: this.formatDate(startDate),
+        end: this.formatDate(endDate),
+        granularity: 'DAILY',
+        template_ids: JSON.stringify(templateIds),
+        metric_types: JSON.stringify(['SENT', 'DELIVERED', 'READ', 'COST']),
+        use_waba_timezone: true,
+      }
+    );
   }
 }

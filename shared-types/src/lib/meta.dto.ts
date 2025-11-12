@@ -49,6 +49,38 @@ export interface PricingAnalyticsResponse {
   id: string;
 }
 
+export interface MetaTemplate {
+  id?: string;
+  name: string;
+  status?: string;
+  language?: string;
+  category?: string;
+  [key: string]: unknown;
+}
+
+export interface TemplateAnalyticsCostEntry {
+  type: string;
+  value: number;
+}
+
+export interface TemplateAnalyticsDataPoint {
+  template_id: string;
+  start: number;
+  end: number;
+  sent?: number;
+  delivered?: number;
+  read?: number;
+  cost?: TemplateAnalyticsCostEntry[];
+}
+
+export interface TemplateAnalyticsResponse {
+  data: Array<{
+    granularity: string;
+    product_type?: string;
+    data_points: TemplateAnalyticsDataPoint[];
+  }>;
+}
+
 export interface MetaLineRowDto {
   id: string;
   externalId: string;

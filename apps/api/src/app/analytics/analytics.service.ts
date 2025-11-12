@@ -208,6 +208,7 @@ export class AnalyticsService {
         date: startDate && endDate ? Between(startDate, endDate) : undefined,
       },
       relations: ['line'],
+      order: { date: 'DESC', volume: 'DESC' },
     });
   }
 }
